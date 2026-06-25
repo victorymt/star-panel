@@ -85,6 +85,10 @@ Item {
     }
 
     // ── Matugen 读取（仅在未选预设时启用） ──
+    function reloadMatugen() {
+        themeReader.running = true;
+    }
+
     Process {
         id: themeReader
         command: ["cat", Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/qs_colors.json"]

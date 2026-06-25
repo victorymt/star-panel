@@ -47,7 +47,11 @@ PanelWindow {
     Connections {
         target: cfg
         function onThemeNameChanged() {
-            if (cfg.themeName !== "") theme.applyPreset(cfg.themeName);
+            if (cfg.themeName !== "") {
+                theme.applyPreset(cfg.themeName);
+            } else {
+                theme.reloadMatugen();
+            }
         }
     }
 
