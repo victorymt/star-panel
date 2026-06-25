@@ -45,67 +45,109 @@ Popup {
         }
 
         // ── 主题选择 ──
-        Text {
-            text: "主题"
-            color: theme.subtext1
-            font.pixelSize: cfg.fontTiny
-            font.bold: true
-        }
-
         RowLayout {
-            spacing: 4
+            spacing: 8
 
-            Repeater {
+            Text {
+                text: "主题"
+                color: theme.subtext0
+                font.pixelSize: cfg.fontSmall
+                Layout.preferredWidth: 80
+            }
+
+            ComboBox {
+                id: themeCombo
+                Layout.fillWidth: true
+                textRole: "label"
+
                 model: [
-                    { name: "",       icon: "🤖" },
-                    { name: "mocha",     icon: "☕" },
-                    { name: "frappe",    icon: "🍵" },
-                    { name: "macchiato", icon: "🌸" },
-                    { name: "latte",     icon: "🥛" }
+                    { name: "",           label: "🤖 Auto（Matugen）" },
+                    { name: "mocha",      label: "☕ Mocha" },
+                    { name: "frappe",     label: "🍵 Frappé" },
+                    { name: "macchiato",  label: "🌸 Macchiato" },
+                    { name: "latte",      label: "🥛 Latte" }
                 ]
 
-                delegate: Button {
+                // 设置当前选中项
+                Component.onCompleted: {
+                    for (var i = 0; i < model.length; i++) {
+                        if (model[i].name === cfg.themeName) {
+                            currentIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                onActivated: {
+                    cfg.themeName = model[currentIndex].name;
+                    cfg.saveSettings();
+                }
+
+                contentItem: Text {
+                    text: themeCombo.model[themeCombo.currentIndex]
+                        ? themeCombo.model[themeCombo.currentIndex].label : ""
+                    color: theme.text
+                    font.pixelSize: cfg.fontSmall
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                        : Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.6)
+                    border.width: 1
+                    border.color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.3)
+                }
+
+                delegate: ItemDelegate {
                     required property var modelData
-                    flat: true
-                    Layout.preferredWidth: 40
-                    Layout.preferredHeight: 32
-                    onClicked: { cfg.themeName = modelData.name; cfg.saveSettings(); }
+                    required property int index
+                    width: themeCombo.width
 
                     contentItem: Text {
-                        text: modelData.icon
-                        font.pixelSize: cfg.fontMedium
-                        horizontalAlignment: Text.AlignHCenter
+                        text: modelData.label
+                        color: themeCombo.currentIndex === index ? theme.text : theme.subtext0
+                        font.pixelSize: cfg.fontSmall
+                        font.bold: themeCombo.currentIndex === index
                         verticalAlignment: Text.AlignVCenter
                     }
 
                     background: Rectangle {
-                        radius: 6
-                        color: cfg.themeName === modelData.name
-                            ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
-                            : parent.hovered
-                                ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.25)
-                                : "transparent"
+                        color: highlighted
+                            ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                            : "transparent"
                     }
                 }
-            }
 
-            // 当前主题名
-            Text {
-                text: {
-                    switch (cfg.themeName) {
-                        case "":      return "Auto";
-                        case "mocha":     return "Mocha";
-                        case "frappe":    return "Frappé";
-                        case "macchiato": return "Macchiato";
-                        case "latte":     return "Latte";
-                        default:          return cfg.themeName;
+                popup: Popup {
+                    y: themeCombo.height
+                    width: themeCombo.width
+                    implicitHeight: contentItem.implicitHeight + padding * 2
+                    padding: 4
+
+                    contentItem: ListView {
+                        clip: true
+                        implicitHeight: contentHeight
+                        model: themeCombo.popup.visible ? themeCombo.delegateModel : null
+                    }
+
+                    background: Rectangle {
+                        radius: 8
+                        color: Qt.rgba(theme.base.r, theme.base.g, theme.base.b, 0.96)
+                        border.width: 1
+                        border.color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
                     }
                 }
-                color: theme.subtext0
-                font.pixelSize: cfg.fontTiny
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignRight
-                verticalAlignment: Text.AlignVCenter
+
+                indicator: Text {
+                    text: "▾"
+                    color: theme.subtext0
+                    font.pixelSize: 10
+                    anchors.right: parent.right
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
         }
 
