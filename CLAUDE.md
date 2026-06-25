@@ -1,1 +1,1 @@
-代码修改完后运行：quickshell -c star-panel 
+代码修改完后重启
