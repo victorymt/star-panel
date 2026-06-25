@@ -27,14 +27,7 @@ Item {
 
             // 类型选择指示器
             Text {
-                text: {
-                    switch (typeSelector.currentIndex) {
-                        case 0: return "📋";
-                        case 1: return "💭";
-                        case 2: return "📓";
-                        default: return "📋";
-                    }
-                }
+                text: typeSelector.typeModels[typeSelector.currentIndex].icon
                 font.pixelSize: 14
             }
 
@@ -60,7 +53,7 @@ Item {
                 Keys.onPressed: function(event) {
                     if (event.key === Qt.Key_Tab) {
                         event.accepted = true;
-                        typeSelector.currentIndex = (typeSelector.currentIndex + 1) % typeSelector.types.length;
+                        typeSelector.currentIndex = (typeSelector.currentIndex + 1) % typeSelector.typeModels.length;
                     }
                 }
 
@@ -68,7 +61,7 @@ Item {
                     var inputText = textInput.text.trim();
                     if (inputText === "") return;
 
-                    var type = typeSelector.types[typeSelector.currentIndex];
+                    var type = typeSelector.typeModels[typeSelector.currentIndex].type;
                     var safeText = "'" + inputText.replace(/'/g, "'\\''") + "'";
 
                     Quickshell.execDetached([
@@ -88,19 +81,22 @@ Item {
             // 类型切换按钮
             Button {
                 id: typeSelector
-                property var types: ["todo", "idea", "log"]
-                property var labels: ["📋 待办", "💭 灵感", "📓 日志"]
+                property var typeModels: [
+                    { type: "todo", label: "📋 待办", icon: "📋" },
+                    { type: "idea", label: "💭 灵感", icon: "💭" },
+                    { type: "log",  label: "📓 日志", icon: "📓" }
+                ]
                 property int currentIndex: 0
 
                 contentItem: Text {
-                    text: typeSelector.labels[typeSelector.currentIndex]
+                    text: typeSelector.typeModels[typeSelector.currentIndex].label
                     color: theme ? theme.subtext0 : "#a6adc8"
                     font.pixelSize: 11
                 }
 
                 flat: true
                 onClicked: {
-                    typeSelector.currentIndex = (typeSelector.currentIndex + 1) % typeSelector.types.length;
+                    typeSelector.currentIndex = (typeSelector.currentIndex + 1) % typeSelector.typeModels.length;
                 }
 
                 background: Rectangle {
