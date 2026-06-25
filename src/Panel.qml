@@ -59,6 +59,13 @@ PanelWindow {
         slideOffset = panelVisible ? 0 : -(panelWidth + panelMargin * 2);
     }
 
+    // 宽度变化时更新隐藏位置，防止面板异常显示
+    onPanelWidthChanged: {
+        if (!panelVisible) {
+            slideOffset = -(panelWidth + panelMargin * 2);
+        }
+    }
+
     Component.onCompleted: {
         slideOffset = -(panelWidth + panelMargin * 2);
         Qt.callLater(() => dataFetcher.reload());
