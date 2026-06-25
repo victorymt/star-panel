@@ -57,7 +57,7 @@ Item {
                 }
 
                 // Tab 切换类型
-                Keys.onPressed: {
+                Keys.onPressed: function(event) {
                     if (event.key === Qt.Key_Tab) {
                         event.accepted = true;
                         typeSelector.currentIndex = (typeSelector.currentIndex + 1) % typeSelector.types.length;
