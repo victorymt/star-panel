@@ -145,6 +145,25 @@ PanelWindow {
                 }
 
                 Button {
+                    text: "⚙"
+                    flat: true
+                    onClicked: settingsPanel.open()
+                    contentItem: Text {
+                        text: "⚙"
+                        color: theme.subtext0
+                        font.pixelSize: cfg.fontLarge
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        radius: 6
+                        color: parent.hovered
+                            ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.6)
+                            : "transparent"
+                    }
+                }
+
+                Button {
                     text: "✕"
                     flat: true
                     onClicked: panel.panelVisible = false
@@ -361,6 +380,9 @@ PanelWindow {
                 Layout.bottomMargin: 4
             }
         }
+
+        // ── 设置面板 ──
+        SettingsPanel { id: settingsPanel }
     }
 
     // ── 快捷键 ──
