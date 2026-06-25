@@ -91,7 +91,10 @@ Item {
 
     Process {
         id: themeReader
-        command: ["cat", Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/qs_colors.json"]
+        command: ["bash", "-c",
+            "cat " + Quickshell.env("HOME") + "/.config/star-panel/theme.json 2>/dev/null" +
+            " || cat " + Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/qs_colors.json 2>/dev/null" +
+            " || echo '{}'"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
