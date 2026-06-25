@@ -301,6 +301,8 @@ PanelWindow {
                     var statusIcon = { "Pending": "⬜", "Done": "✅", "Archived": "📦" };
                     return raw.map(function(item) {
                         return {
+                            id: item.id,
+                            rawStatus: item.status,
                             priority: priorityIcon[item.priority] || "🟢",
                             status: statusIcon[item.status] || "⬜",
                             title: item.title,

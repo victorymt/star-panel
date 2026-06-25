@@ -141,10 +141,26 @@ Item {
                     : "transparent"
             }
 
-            // 点击切换完成状态（将来可以扩展为 IPC 调用）
+            // 点击循环状态: Pending → Done → Archived → Pending
             onClicked: {
-                // TODO: 调用 starcatch todo done <id>
+                var id = modelData.id;
+                var status = modelData.rawStatus;
+                var cmd;
+                if (status === "Pending")   { cmd = "done"; }
+                else if (status === "Done") { cmd = "archive"; }
+                else                        { cmd = "reopen"; }
+
+                Quickshell.execDetached(["starcatch", "todo", cmd, id]);
+                todoRefreshTimer.start();
             }
         }
+    }
+
+    // 延迟刷新：等 starcatch todo done/archive/reopen 完成
+    Timer {
+        id: todoRefreshTimer
+        interval: 300
+        repeat: false
+        onTriggered: panel.reloadData("todo")
     }
 }
