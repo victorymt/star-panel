@@ -57,24 +57,23 @@ Popup {
 
             Repeater {
                 model: [
-                    { name: "",       label: "🤖 Auto" },
-                    { name: "mocha",     label: "☕ Mocha" },
-                    { name: "frappe",    label: "🍵 Frappé" },
-                    { name: "macchiato", label: "🌸 Macchiato" },
-                    { name: "latte",     label: "🥛 Latte" }
+                    { name: "",       icon: "🤖" },
+                    { name: "mocha",     icon: "☕" },
+                    { name: "frappe",    icon: "🍵" },
+                    { name: "macchiato", icon: "🌸" },
+                    { name: "latte",     icon: "🥛" }
                 ]
 
                 delegate: Button {
                     required property var modelData
                     flat: true
-                    Layout.fillWidth: true
+                    Layout.preferredWidth: 40
+                    Layout.preferredHeight: 32
                     onClicked: { cfg.themeName = modelData.name; cfg.saveSettings(); }
 
                     contentItem: Text {
-                        text: modelData.label
-                        color: cfg.themeName === modelData.name ? theme.text : theme.overlay0
-                        font.pixelSize: cfg.fontTiny
-                        font.bold: cfg.themeName === modelData.name
+                        text: modelData.icon
+                        font.pixelSize: cfg.fontMedium
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -88,6 +87,25 @@ Popup {
                                 : "transparent"
                     }
                 }
+            }
+
+            // 当前主题名
+            Text {
+                text: {
+                    switch (cfg.themeName) {
+                        case "":      return "Auto";
+                        case "mocha":     return "Mocha";
+                        case "frappe":    return "Frappé";
+                        case "macchiato": return "Macchiato";
+                        case "latte":     return "Latte";
+                        default:          return cfg.themeName;
+                    }
+                }
+                color: theme.subtext0
+                font.pixelSize: cfg.fontTiny
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignRight
+                verticalAlignment: Text.AlignVCenter
             }
         }
 
