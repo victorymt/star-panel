@@ -80,7 +80,7 @@ Popup {
                     Layout.preferredWidth: 28
                     Layout.preferredHeight: 28
                     enabled: cfg[modelData.key] > 6
-                    onClicked: cfg[modelData.key] -= 1
+                    onClicked: { cfg[modelData.key] -= 1; cfg.saveSettings(); }
 
                     contentItem: Text {
                         text: "−"
@@ -103,7 +103,7 @@ Popup {
                     Layout.preferredWidth: 28
                     Layout.preferredHeight: 28
                     enabled: cfg[modelData.key] < 40
-                    onClicked: cfg[modelData.key] += 1
+                    onClicked: { cfg[modelData.key] += 1; cfg.saveSettings(); }
 
                     contentItem: Text {
                         text: "+"
@@ -142,12 +142,13 @@ Popup {
             flat: true
             Layout.fillWidth: true
             onClicked: {
-                cfg.fontTiny = 10;
-                cfg.fontSmall = 11;
-                cfg.fontBase = 13;
-                cfg.fontMedium = 14;
-                cfg.fontLarge = 16;
-                cfg.fontXl = 18;
+                cfg.fontTiny   = cfg.defaultFontTiny;
+                cfg.fontSmall  = cfg.defaultFontSmall;
+                cfg.fontBase   = cfg.defaultFontBase;
+                cfg.fontMedium = cfg.defaultFontMedium;
+                cfg.fontLarge  = cfg.defaultFontLarge;
+                cfg.fontXl     = cfg.defaultFontXl;
+                cfg.saveSettings();
             }
 
             contentItem: Text {
@@ -167,7 +168,7 @@ Popup {
         }
 
         Text {
-            text: "修改即时生效 · 重启后恢复默认"
+            text: "修改即时生效 · 重启后保留"
             color: theme.overlay0
             font.pixelSize: cfg.fontTiny
             Layout.fillWidth: true

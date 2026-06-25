@@ -26,9 +26,59 @@ Item {
     property int fontLarge: 16   // 刷新/关闭按钮
     property int fontXl: 18      // 头部标题
 
+    // ── 字体默认值（恢复用）──
+    readonly property int defaultFontTiny: 10
+    readonly property int defaultFontSmall: 11
+    readonly property int defaultFontBase: 13
+    readonly property int defaultFontMedium: 14
+    readonly property int defaultFontLarge: 16
+    readonly property int defaultFontXl: 18
+
+    // ── 持久化路径 ──
+    readonly property string settingsDir: homeDir + "/.config/star-panel"
+    readonly property string settingsFile: settingsDir + "/settings.json"
+
     // ── CLI 命令 ──
     property string starcatchBin: "starcatch"
 
     // ── 用户 Home 目录 ──
     readonly property string homeDir: Quickshell.env("HOME")
+
+    // ── 从文件加载持久化设置 ──
+    Process {
+        id: settingsLoader
+        command: ["bash", "-c", "cat " + config.settingsFile + " 2>/dev/null || echo '{}'"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text.trim());
+                    if (typeof data.fontTiny   === "number") config.fontTiny   = data.fontTiny;
+                    if (typeof data.fontSmall  === "number") config.fontSmall  = data.fontSmall;
+                    if (typeof data.fontBase   === "number") config.fontBase   = data.fontBase;
+                    if (typeof data.fontMedium === "number") config.fontMedium = data.fontMedium;
+                    if (typeof data.fontLarge  === "number") config.fontLarge  = data.fontLarge;
+                    if (typeof data.fontXl     === "number") config.fontXl     = data.fontXl;
+                } catch (e) {}
+            }
+        }
+    }
+
+    // ── 持久化保存 ──
+    function saveSettings() {
+        var data = {
+            fontTiny: fontTiny,
+            fontSmall: fontSmall,
+            fontBase: fontBase,
+            fontMedium: fontMedium,
+            fontLarge: fontLarge,
+            fontXl: fontXl
+        };
+        var json = JSON.stringify(data, null, 2);
+        // JSON 仅含数字，无双引号冲突，单引号包裹即可
+        Quickshell.execDetached([
+            "bash", "-c",
+            "mkdir -p " + settingsDir + " && printf '%s\\n' '" + json.replace(/'/g, "'\\''") + "' > " + settingsFile
+        ]);
+    }
 }
