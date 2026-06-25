@@ -50,10 +50,18 @@ Item {
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "快速捕获... 按 Enter 提交"
+                    text: "快速捕获... Tab 切换类型 · Enter 提交"
                     color: theme ? theme.overlay0 : "#6c7086"
                     font.pixelSize: 13
                     visible: !parent.text
+                }
+
+                // Tab 切换类型
+                Keys.onPressed: {
+                    if (event.key === Qt.Key_Tab) {
+                        event.accepted = true;
+                        typeSelector.currentIndex = (typeSelector.currentIndex + 1) % typeSelector.types.length;
+                    }
                 }
 
                 Keys.onReturnPressed: {
