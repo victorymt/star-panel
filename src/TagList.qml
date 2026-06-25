@@ -26,7 +26,7 @@ Flow {
                 id: tagLabel
                 text: modelData
                 color: root.tagColor
-                font.pixelSize: 10
+                font.pixelSize: cfg.fontTiny
                 anchors.centerIn: parent
             }
         }

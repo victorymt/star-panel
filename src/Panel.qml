@@ -119,7 +119,7 @@ PanelWindow {
                 Text {
                     text: "⭐ 星捕"
                     color: theme.text
-                    font.pixelSize: 18
+                    font.pixelSize: cfg.fontXl
                     font.bold: true
                 }
 
@@ -132,7 +132,7 @@ PanelWindow {
                     contentItem: Text {
                         text: "↻"
                         color: theme.subtext0
-                        font.pixelSize: 16
+                        font.pixelSize: cfg.fontLarge
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -151,7 +151,7 @@ PanelWindow {
                     contentItem: Text {
                         text: "✕"
                         color: theme.subtext0
-                        font.pixelSize: 16
+                        font.pixelSize: cfg.fontLarge
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -191,7 +191,7 @@ PanelWindow {
                         contentItem: Text {
                             text: modelData.label
                             color: tabBar.currentIndex === index ? theme.text : theme.overlay0
-                            font.pixelSize: 13
+                            font.pixelSize: cfg.fontBase
                             font.bold: tabBar.currentIndex === index
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter

@@ -21,7 +21,7 @@ Item {
             anchors.centerIn: parent
             text: "📓 暂无日志\n今天还没有记录哦~"
             color: colors ? colors.overlay0 : "#6c7086"
-            font.pixelSize: 14
+            font.pixelSize: cfg.fontMedium
             horizontalAlignment: Text.AlignHCenter
             lineHeight: 1.6
         }
@@ -62,7 +62,7 @@ Item {
                 Text {
                     text: modelData.content || ""
                     color: colors ? colors.text : "#cdd6f4"
-                    font.pixelSize: 13
+                    font.pixelSize: cfg.fontBase
                     elide: Text.ElideRight
                     Layout.fillWidth: true
                     maximumLineCount: 2
@@ -72,7 +72,7 @@ Item {
                 Text {
                     text: modelData.title || ""
                     color: colors ? colors.overlay0 : "#6c7086"
-                    font.pixelSize: 10
+                    font.pixelSize: cfg.fontTiny
                     elide: Text.ElideRight
                     Layout.fillWidth: true
                 }

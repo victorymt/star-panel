@@ -49,7 +49,7 @@ Item {
                 contentItem: Text {
                     text: modelData.label
                     color: root.filterStatus === modelData.status ? colors.text : colors.overlay0
-                    font.pixelSize: 11
+                    font.pixelSize: cfg.fontSmall
                     font.bold: root.filterStatus === modelData.status
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
@@ -86,7 +86,7 @@ Item {
                 return "📦 没有已归档任务";
             }
             color: colors ? colors.overlay0 : "#6c7086"
-            font.pixelSize: 14
+            font.pixelSize: cfg.fontMedium
             horizontalAlignment: Text.AlignHCenter
             lineHeight: 1.6
         }
@@ -148,14 +148,14 @@ Item {
                     text: modelData.status === "✅" ? "✓" :
                           modelData.status === "📦" ? "📦" : "○"
                     color: colors ? colors.subtext0 : "#a6adc8"
-                    font.pixelSize: 14
+                    font.pixelSize: cfg.fontMedium
                 }
 
                 // 标题
                 Text {
                     text: modelData.title
                     color: colors ? colors.text : "#cdd6f4"
-                    font.pixelSize: 13
+                    font.pixelSize: cfg.fontBase
                     elide: Text.ElideRight
                     Layout.fillWidth: true
 
@@ -176,7 +176,7 @@ Item {
                         if (diff < 2) return "#fab387";   // 临近
                         return colors ? colors.overlay0 : "#6c7086";
                     }
-                    font.pixelSize: 11
+                    font.pixelSize: cfg.fontSmall
                 }
 
                 // 标签

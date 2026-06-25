@@ -28,7 +28,7 @@ Item {
             // 类型选择指示器
             Text {
                 text: typeSelector.typeModels[typeSelector.currentIndex].icon
-                font.pixelSize: 14
+                font.pixelSize: cfg.fontMedium
             }
 
             // 快速输入框
@@ -37,7 +37,7 @@ Item {
                 Layout.fillWidth: true
                 verticalAlignment: Text.AlignVCenter
                 color: theme ? theme.text : "#cdd6f4"
-                font.pixelSize: 13
+                font.pixelSize: cfg.fontBase
                 clip: true
                 activeFocusOnPress: true
 
@@ -45,7 +45,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "快速捕获... Tab 切换类型 · Enter 提交"
                     color: theme ? theme.overlay0 : "#6c7086"
-                    font.pixelSize: 13
+                    font.pixelSize: cfg.fontBase
                     visible: !parent.text
                 }
 
@@ -91,7 +91,7 @@ Item {
                 contentItem: Text {
                     text: typeSelector.typeModels[typeSelector.currentIndex].label
                     color: theme ? theme.subtext0 : "#a6adc8"
-                    font.pixelSize: 11
+                    font.pixelSize: cfg.fontSmall
                 }
 
                 flat: true

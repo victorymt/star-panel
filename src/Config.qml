@@ -18,6 +18,14 @@ Item {
     // ── 默认显示的标签页 ──
     property int defaultTab: 0  // 0=todo, 1=idea, 2=log
 
+    // ── 字体大小 ──
+    property int fontTiny: 10    // 标签、日志日期
+    property int fontSmall: 11   // 过滤器按钮、截止日期、灵感副标题、类型选择器
+    property int fontBase: 13    // 标签页、输入框、待办/灵感标题、日志正文
+    property int fontMedium: 14  // 空状态提示、状态图标、类型图标
+    property int fontLarge: 16   // 刷新/关闭按钮
+    property int fontXl: 18      // 头部标题
+
     // ── CLI 命令 ──
     property string starcatchBin: "starcatch"
 

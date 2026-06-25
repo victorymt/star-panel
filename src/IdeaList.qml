@@ -21,7 +21,7 @@ Item {
             anchors.centerIn: parent
             text: "💭 暂无灵感\n等待星光的降临~"
             color: colors ? colors.overlay0 : "#6c7086"
-            font.pixelSize: 14
+            font.pixelSize: cfg.fontMedium
             horizontalAlignment: Text.AlignHCenter
             lineHeight: 1.6
         }
@@ -62,7 +62,7 @@ Item {
                 Text {
                     text: modelData.title || "(untitled)"
                     color: colors ? colors.text : "#cdd6f4"
-                    font.pixelSize: 13
+                    font.pixelSize: cfg.fontBase
                     font.bold: true
                     elide: Text.ElideRight
                     Layout.fillWidth: true
@@ -71,7 +71,7 @@ Item {
                 Text {
                     text: modelData.content || ""
                     color: colors ? colors.subtext0 : "#a6adc8"
-                    font.pixelSize: 11
+                    font.pixelSize: cfg.fontSmall
                     elide: Text.ElideRight
                     Layout.fillWidth: true
                     maximumLineCount: 1
