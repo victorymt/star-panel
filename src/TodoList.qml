@@ -9,17 +9,80 @@ Item {
 
     property var items: []
     property bool loading: false
+    property string filterStatus: "Pending"
     readonly property var colors: theme
+
+    // 过滤后的列表
+    readonly property var filteredItems: {
+        var all = items || [];
+        if (filterStatus === "all") return all;
+        return all.filter(function(item) {
+            return item.rawStatus === filterStatus;
+        });
+    }
+
+    // ── 过滤器栏 ──
+    RowLayout {
+        id: filterBar
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 32
+        spacing: 4
+
+        property var filters: [
+            { label: "⬜ 待办",   status: "Pending" },
+            { label: "✅ 已完成", status: "Done" },
+            { label: "📦 已归档", status: "Archived" }
+        ]
+
+        Repeater {
+            model: filterBar.filters
+
+            delegate: Button {
+                required property var modelData
+                required property int index
+
+                Layout.fillWidth: true
+                flat: true
+                onClicked: root.filterStatus = modelData.status
+
+                contentItem: Text {
+                    text: modelData.label
+                    color: root.filterStatus === modelData.status ? colors.text : colors.overlay0
+                    font.pixelSize: 11
+                    font.bold: root.filterStatus === modelData.status
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                background: Rectangle {
+                    radius: 6
+                    color: root.filterStatus === modelData.status
+                        ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.5)
+                        : "transparent"
+                }
+            }
+        }
+    }
 
     // ── 空状态 ──
     Rectangle {
-        anchors.fill: parent
-        visible: !loading && items.length === 0
+        anchors.top: filterBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        visible: !loading && filteredItems.length === 0
         color: "transparent"
 
         Text {
             anchors.centerIn: parent
-            text: "✨ 暂无待办\n一切都在掌控之中~"
+            text: {
+                if (items.length === 0) return "✨ 暂无待办\n一切都在掌控之中~";
+                if (filterStatus === "Pending") return "⬜ 没有待办任务";
+                if (filterStatus === "Done") return "✅ 没有已完成任务";
+                return "📦 没有已归档任务";
+            }
             color: colors ? colors.overlay0 : "#6c7086"
             font.pixelSize: 14
             horizontalAlignment: Text.AlignHCenter
@@ -39,9 +102,13 @@ Item {
     // ── 待办列表 ──
     ListView {
         id: listView
-        anchors.fill: parent
+        anchors.top: filterBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.topMargin: 8
         visible: !loading
-        model: root.items
+        model: root.filteredItems
         clip: true
         spacing: 4
 
