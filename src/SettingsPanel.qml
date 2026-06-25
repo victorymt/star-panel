@@ -44,6 +44,60 @@ Popup {
             color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.3)
         }
 
+        // ── 主题选择 ──
+        Text {
+            text: "主题"
+            color: theme.subtext1
+            font.pixelSize: cfg.fontTiny
+            font.bold: true
+        }
+
+        RowLayout {
+            spacing: 4
+
+            Repeater {
+                model: [
+                    { name: "",       label: "🤖 Auto" },
+                    { name: "mocha",     label: "☕ Mocha" },
+                    { name: "frappe",    label: "🍵 Frappé" },
+                    { name: "macchiato", label: "🌸 Macchiato" },
+                    { name: "latte",     label: "🥛 Latte" }
+                ]
+
+                delegate: Button {
+                    required property var modelData
+                    flat: true
+                    Layout.fillWidth: true
+                    onClicked: { cfg.themeName = modelData.name; cfg.saveSettings(); }
+
+                    contentItem: Text {
+                        text: modelData.label
+                        color: cfg.themeName === modelData.name ? theme.text : theme.overlay0
+                        font.pixelSize: cfg.fontTiny
+                        font.bold: cfg.themeName === modelData.name
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    background: Rectangle {
+                        radius: 6
+                        color: cfg.themeName === modelData.name
+                            ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
+                            : parent.hovered
+                                ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.25)
+                                : "transparent"
+                    }
+                }
+            }
+        }
+
+        // 分隔线
+        Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.3)
+        }
+
         // ── 面板宽度 ──
         RowLayout {
             spacing: 8

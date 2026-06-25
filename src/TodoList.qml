@@ -136,9 +136,9 @@ Item {
                     radius: 2
                     color: {
                         switch (modelData.priority) {
-                            case "🔴": return "#f38ba8";  // red
-                            case "🟡": return "#fab387";  // peach
-                            default:   return "#a6e3a1";  // green
+                            case "🔴": return colors ? colors.red : "#f38ba8";
+                            case "🟡": return colors ? colors.peach : "#fab387";
+                            default:   return colors ? colors.green : "#a6e3a1";
                         }
                     }
                 }
@@ -172,8 +172,8 @@ Item {
                         var today = new Date();
                         var due = Date.parse(modelData.due);
                         var diff = (due - today) / (1000 * 60 * 60 * 24);
-                        if (diff < 0) return "#f38ba8";   // 过期
-                        if (diff < 2) return "#fab387";   // 临近
+                        if (diff < 0) return colors ? colors.red : "#f38ba8";
+                        if (diff < 2) return colors ? colors.peach : "#fab387";
                         return colors ? colors.overlay0 : "#6c7086";
                     }
                     font.pixelSize: cfg.fontSmall

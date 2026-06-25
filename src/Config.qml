@@ -36,6 +36,9 @@ Item {
     readonly property int defaultFontLarge: 16
     readonly property int defaultFontXl: 18
 
+    // ── 主题 ──
+    property string themeName: ""  // 空=Matugen自动, mocha/latte/frappe/macchiato=预设
+
     // ── 持久化路径 ──
     readonly property string settingsDir: homeDir + "/.config/star-panel"
     readonly property string settingsFile: settingsDir + "/settings.json"
@@ -62,6 +65,7 @@ Item {
                     if (typeof data.fontLarge  === "number") config.fontLarge  = data.fontLarge;
                     if (typeof data.fontXl     === "number") config.fontXl     = data.fontXl;
                     if (typeof data.panelWidth === "number") config.panelWidth = data.panelWidth;
+                    if (typeof data.themeName  === "string") config.themeName  = data.themeName;
                 } catch (e) {}
             }
         }
@@ -70,6 +74,7 @@ Item {
     // ── 持久化保存 ──
     function saveSettings() {
         var data = {
+            themeName: themeName,
             panelWidth: panelWidth,
             fontTiny: fontTiny,
             fontSmall: fontSmall,
