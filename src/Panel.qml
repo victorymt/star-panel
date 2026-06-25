@@ -43,6 +43,18 @@ PanelWindow {
     Colors { id: theme }
     Config { id: cfg }
 
+    // ── 主题预设应用 ──
+    Component.onCompleted: {
+        if (cfg.themeName !== "") theme.applyPreset(cfg.themeName);
+    }
+
+    Connections {
+        target: cfg
+        function onThemeNameChanged() {
+            if (cfg.themeName !== "") theme.applyPreset(cfg.themeName);
+        }
+    }
+
     // ── 显隐控制 ──
     property bool panelVisible: false
     property real slideOffset: -(panelWidth + panelMargin * 2)

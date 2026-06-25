@@ -84,23 +84,6 @@ Item {
         root.pink = p.pink; root.yellow = p.yellow; root.maroon = p.maroon; root.teal = p.teal;
     }
 
-    // ── 监听 cfg.themeName，非空时应用预设 ──
-    Connections {
-        target: typeof cfg !== "undefined" ? cfg : null
-        enabled: target !== null
-        function onThemeNameChanged() {
-            if (cfg.themeName !== "") {
-                root.applyPreset(cfg.themeName);
-            }
-        }
-    }
-
-    Component.onCompleted: {
-        if (typeof cfg !== "undefined" && cfg.themeName !== "") {
-            root.applyPreset(cfg.themeName);
-        }
-    }
-
     // ── Matugen 读取（仅在未选预设时启用） ──
     Process {
         id: themeReader
