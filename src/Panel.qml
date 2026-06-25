@@ -44,10 +44,6 @@ PanelWindow {
     Config { id: cfg }
 
     // ── 主题预设应用 ──
-    Component.onCompleted: {
-        if (cfg.themeName !== "") theme.applyPreset(cfg.themeName);
-    }
-
     Connections {
         target: cfg
         function onThemeNameChanged() {
@@ -80,6 +76,7 @@ PanelWindow {
 
     Component.onCompleted: {
         slideOffset = -(panelWidth + panelMargin * 2);
+        if (cfg.themeName !== "") theme.applyPreset(cfg.themeName);
         Qt.callLater(() => dataFetcher.reload());
     }
 
