@@ -61,10 +61,11 @@ Item {
                     if (inputText === "") return;
 
                     var type = typeSelector.types[typeSelector.currentIndex];
+                    var safeText = "'" + inputText.replace(/'/g, "'\\''") + "'";
 
                     Quickshell.execDetached([
                         "bash", "-c",
-                        "printf '%s\\n' " + quote(inputText) + " | starcatch pipe " + type
+                        "printf '%s\\n' " + safeText + " | starcatch pipe " + type
                     ]);
 
                     textInput.text = "";
@@ -99,8 +100,5 @@ Item {
             }
         }
 
-        function quote(s) {
-            return "'" + s.replace(/'/g, "'\\''") + "'";
-        }
     }
 }
