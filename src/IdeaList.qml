@@ -53,9 +53,10 @@ Item {
             required property int index
 
             width: ListView.view.width
-            height: 52
+            implicitHeight: Math.max(52, contentColumn.implicitHeight + 16)
 
             contentItem: ColumnLayout {
+                id: contentColumn
                 spacing: 2
 
                 Text {
@@ -74,6 +75,30 @@ Item {
                     elide: Text.ElideRight
                     Layout.fillWidth: true
                     maximumLineCount: 1
+                }
+
+                // 标签
+                Flow {
+                    visible: modelData.tags && modelData.tags.length > 0
+                    spacing: 2
+                    Repeater {
+                        model: modelData.tags
+                        delegate: Rectangle {
+                            required property string modelData
+                            height: 18
+                            width: tagLabel.width + 8
+                            radius: 4
+                            color: Qt.rgba(colors.sapphire.r, colors.sapphire.g, colors.sapphire.b, 0.15)
+
+                            Text {
+                                id: tagLabel
+                                text: modelData
+                                color: colors ? colors.sapphire : "#74c7ec"
+                                font.pixelSize: 10
+                                anchors.centerIn: parent
+                            }
+                        }
+                    }
                 }
             }
 
