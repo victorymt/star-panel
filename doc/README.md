@@ -262,35 +262,51 @@ echo "今天好累" | starcatch pipe log
 
 ## 6. Hyprland 集成
 
-### 6.1 快捷键绑定
+### 6.1 快捷键绑定（已配置 ✅）
 
-添加到 `~/.config/hypr/hyprland.conf`:
+添加到 `~/.config/hypr/hyprland.lua`:
 
-```conf
-# 负一屏 toggle
-bind = $mainMod, N, exec, qs -c star-panel ipc call panel toggle
-
-# 可选：开机启动
-exec-once = quickshell -c star-panel --daemonize
+```lua
+-- StarPanel 负一屏 (Quickshell)
+hl.bind(mainMod .. " + I", hl.dsp.exec_cmd("qs -c star-panel ipc call panel toggle"))
 ```
 
-### 6.2 窗口规则（可选）
+已配置在 `hyprland.lua` 中，快捷键 **Super + I**~
 
-如果希望 star-panel 出现在 special workspace：
+### 6.2 开机启动（已配置 ✅）
 
-```conf
-# 注意：PanelWindow + WlrLayershell 默认是 Overlay 层，
-# 不受普通窗口规则管理。此规则适用于备用 Window 模式。
+```lua
+-- 在 hyprland.start 事件中
+hl.exec_cmd("qs -c star-panel --daemonize")
 ```
 
-### 6.3 集成拓扑
+已添加到 `hyprland.lua` 的 `hyprland.start` 回调中~
+
+### 6.3 Layer Rule（已配置 ✅）
+
+star-panel 使用 `WlrLayershell.Overlay` 的 `PanelWindow`，
+不适用普通 Hyprland `windowrulev2`，需用 `layer_rule`：
+
+```lua
+hl.layer_rule({
+  match = { namespace = "qs-star-panel" },
+  name = "star-panel-blur",
+  blur = true,
+  ignore_alpha = 0,
+})
+```
+
+已配置 blur 效果。
+
+### 6.4 集成拓扑
 
 ```
 Hyprland
- ├── bind Win+N ──→ qs ipc call panel toggle
- ├── exec-once ──→ quickshell --daemonize
+ ├── bind Super+I ──→ qs ipc call panel toggle
+ ├── hyprland.start ──→ qs --daemonize (开机启动)
  │
  └── star-panel (WlrLayershell.Overlay)
+      ├── layer_rule: blur enabled
       └── Process ──→ starcatch CLI ──→ SQLite DB
 ```
 

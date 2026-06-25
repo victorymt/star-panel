@@ -2,7 +2,7 @@
 
 > _Starcatch 的 Quickshell 负一屏组件 — 在 Hyprland 上优雅地捕获星光 ✨_
 
-轻按 Win+N，右侧滑出你的待办、灵感和日志 ♪
+轻按 **Super + I**，右侧滑出你的待办、灵感和日志 ♪
 
 ## 🚀 快速开始
 
@@ -13,8 +13,8 @@ quickshell -c star-panel --daemonize
 # 切换显隐
 qs -c star-panel ipc call panel toggle
 
-# Hyprland 快捷键
-# bind = $mainMod, N, exec, qs -c star-panel ipc call panel toggle
+# Hyprland 快捷键（已在 hyprland.lua 中配置）
+# Super + I → qs -c star-panel ipc call panel toggle
 ```
 
 ## 📂 项目结构
