@@ -137,6 +137,35 @@ Popup {
             color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.3)
         }
 
+        Button {
+            text: "恢复默认"
+            flat: true
+            Layout.fillWidth: true
+            onClicked: {
+                cfg.fontTiny = 10;
+                cfg.fontSmall = 11;
+                cfg.fontBase = 13;
+                cfg.fontMedium = 14;
+                cfg.fontLarge = 16;
+                cfg.fontXl = 18;
+            }
+
+            contentItem: Text {
+                text: "恢复默认"
+                color: theme.subtext0
+                font.pixelSize: cfg.fontSmall
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            background: Rectangle {
+                radius: 6
+                color: parent.hovered
+                    ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                    : "transparent"
+            }
+        }
+
         Text {
             text: "修改即时生效 · 重启后恢复默认"
             color: theme.overlay0
