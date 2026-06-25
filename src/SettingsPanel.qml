@@ -44,6 +44,93 @@ Popup {
             color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.3)
         }
 
+        // ── 面板宽度 ──
+        RowLayout {
+            spacing: 8
+
+            Text {
+                text: "面板宽度"
+                color: theme.subtext0
+                font.pixelSize: cfg.fontSmall
+                Layout.preferredWidth: 100
+            }
+
+            Text {
+                text: cfg.panelWidth + "px"
+                color: theme.text
+                font.pixelSize: cfg.fontBase
+                font.bold: true
+                Layout.preferredWidth: 48
+                horizontalAlignment: Text.AlignHCenter
+            }
+
+            Button {
+                flat: true
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+                enabled: cfg.panelWidth > 280
+                onClicked: { cfg.panelWidth -= 20; cfg.saveSettings(); }
+
+                contentItem: Text {
+                    text: "−"
+                    color: enabled ? theme.subtext0 : theme.overlay0
+                    font.pixelSize: cfg.fontBase
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
+                        : "transparent"
+                }
+            }
+
+            Button {
+                flat: true
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+                enabled: cfg.panelWidth < 900
+                onClicked: { cfg.panelWidth += 20; cfg.saveSettings(); }
+
+                contentItem: Text {
+                    text: "+"
+                    color: enabled ? theme.subtext0 : theme.overlay0
+                    font.pixelSize: cfg.fontBase
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
+                        : "transparent"
+                }
+            }
+        }
+
+        // 分隔线
+        Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.3)
+        }
+
+        // ── 字体大小 ──
+        RowLayout {
+            spacing: 8
+
+            Text {
+                text: "字体大小"
+                color: theme.subtext1
+                font.pixelSize: cfg.fontTiny
+                font.bold: true
+                Layout.fillWidth: true
+            }
+        }
+
         // 字体大小设置行
         Repeater {
             model: [
@@ -142,6 +229,7 @@ Popup {
             flat: true
             Layout.fillWidth: true
             onClicked: {
+                cfg.panelWidth = cfg.defaultPanelWidth;
                 cfg.fontTiny   = cfg.defaultFontTiny;
                 cfg.fontSmall  = cfg.defaultFontSmall;
                 cfg.fontBase   = cfg.defaultFontBase;

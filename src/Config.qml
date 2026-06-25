@@ -12,6 +12,8 @@ Item {
     property real panelRadius: 16
     property real animationDuration: 280
 
+    readonly property real defaultPanelWidth: 420
+
     // ── 数据刷新间隔（毫秒） ──
     property real refreshInterval: 30000
 
@@ -59,6 +61,7 @@ Item {
                     if (typeof data.fontMedium === "number") config.fontMedium = data.fontMedium;
                     if (typeof data.fontLarge  === "number") config.fontLarge  = data.fontLarge;
                     if (typeof data.fontXl     === "number") config.fontXl     = data.fontXl;
+                    if (typeof data.panelWidth === "number") config.panelWidth = data.panelWidth;
                 } catch (e) {}
             }
         }
@@ -67,6 +70,7 @@ Item {
     // ── 持久化保存 ──
     function saveSettings() {
         var data = {
+            panelWidth: panelWidth,
             fontTiny: fontTiny,
             fontSmall: fontSmall,
             fontBase: fontBase,
