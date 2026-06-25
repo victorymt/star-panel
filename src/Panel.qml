@@ -12,13 +12,13 @@ PanelWindow {
 
     // ── Wayland 属性 ──
     WlrLayershell.namespace: "qs-star-panel"
-    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.layer: WlrLayer.Top
     exclusionMode: ExclusionMode.Ignore
     focusable: true
 
     // ── 尺寸与定位 ──
-    readonly property real panelWidth: 420
-    readonly property real panelMargin: 8
+    readonly property real panelWidth: cfg.panelWidth
+    readonly property real panelMargin: cfg.panelMargin
 
     // PanelWindow 在 WlrLayershell 模式下由 layershell 协议管理位置
     implicitWidth: panelWidth + panelMargin * 2
@@ -31,15 +31,16 @@ PanelWindow {
     anchors.right: true
     anchors.left: false
 
-    // ── 主题色 ──
+    // ── 配置 & 主题色 ──
     Colors { id: theme }
+    Config { id: cfg }
 
     // ── 显隐控制 ──
     property bool panelVisible: false
     property real slideOffset: -(panelWidth + panelMargin * 2)
     Behavior on slideOffset {
         NumberAnimation {
-            duration: 280
+            duration: cfg.animationDuration
             easing.type: Easing.OutQuint
         }
     }
@@ -72,6 +73,17 @@ PanelWindow {
         }
     }
 
+    // ── 点击外部关闭（必须在 backdrop 之前，否则拦截所有事件） ──
+    MouseArea {
+        anchors.fill: parent
+        enabled: panelVisible
+        onClicked: {
+            if (mouse.x < backdrop.x || mouse.x > backdrop.x + backdrop.width) {
+                panelVisible = false;
+            }
+        }
+    }
+
     // ── 背景面板 ──
     Rectangle {
         id: backdrop
@@ -79,7 +91,7 @@ PanelWindow {
         y: panelMargin
         width: panelWidth
         height: parent.height - panelMargin * 2
-        radius: 16
+        radius: cfg.panelRadius
 
         color: Qt.rgba(theme.base.r, theme.base.g, theme.base.b, 0.92)
         border.width: 1
@@ -149,7 +161,7 @@ PanelWindow {
                 id: tabBar
                 Layout.fillWidth: true
                 spacing: 4
-                property int currentIndex: 0
+                property int currentIndex: cfg.defaultTab
 
                 property var tabs: [
                     { label: "📋 待办" },
@@ -223,11 +235,11 @@ PanelWindow {
 
                 Process {
                     id: todoProcess
-                    command: ["starcatch", "todo", "list", "--all"]
+                    command: ["starcatch", "--json", "todo", "list", "--all"]
                     running: false
                     stdout: StdioCollector {
                         onStreamFinished: {
-                            dataFetcher.todos = dataFetcher.parseCliOutput(this.text);
+                            dataFetcher.todos = dataFetcher.parseTodos(this.text);
                             dataFetcher.checkDone();
                         }
                     }
@@ -235,11 +247,11 @@ PanelWindow {
 
                 Process {
                     id: ideaProcess
-                    command: ["starcatch", "idea", "list", "-d", "7"]
+                    command: ["starcatch", "--json", "idea", "list", "-d", "7"]
                     running: false
                     stdout: StdioCollector {
                         onStreamFinished: {
-                            dataFetcher.ideas = dataFetcher.parseCliOutput(this.text);
+                            dataFetcher.ideas = dataFetcher.parseIdeas(this.text);
                             dataFetcher.checkDone();
                         }
                     }
@@ -247,11 +259,11 @@ PanelWindow {
 
                 Process {
                     id: logProcess
-                    command: ["starcatch", "log", "list", "-d", "3"]
+                    command: ["starcatch", "--json", "log", "list", "-d", "3"]
                     running: false
                     stdout: StdioCollector {
                         onStreamFinished: {
-                            dataFetcher.logs = dataFetcher.parseCliOutput(this.text);
+                            dataFetcher.logs = dataFetcher.parseLogs(this.text);
                             dataFetcher.checkDone();
                         }
                     }
@@ -263,28 +275,61 @@ PanelWindow {
                     }
                 }
 
-                function parseCliOutput(text) {
-                    var lines = text.split('\n');
-                    var items = [];
-                    for (var i = 0; i < lines.length; i++) {
-                        var line = lines[i].trim();
-                        if (line === '' || line.startsWith('📋') || line.startsWith('📋 Todos') ||
-                            line.startsWith('✅') || line.startsWith('📦') || line.startsWith('💭') ||
-                            line.startsWith('📓') || line.startsWith('📋 待办') || line.startsWith('No')) {
-                            continue;
-                        }
-                        var match = line.match(/^([🟢🟡🔴])\s+(⬜|✅|📦)\s+(.+?)(?:\s+\[(.+?)\])?\s*\|\s*due:\s*(.+)$/);
-                        if (match) {
-                            items.push({
-                                priority: match[1],
-                                status: match[2],
-                                title: match[3],
-                                tags: match[4] ? match[4].split(', ') : [],
-                                due: match[5]
-                            });
-                        }
-                    }
-                    return items;
+                // ── JSON 解析辅助 ──
+                function parseJson(text) {
+                    try { return JSON.parse(text.trim()); } catch(e) { return []; }
+                }
+
+                function formatDate(iso) {
+                    if (!iso) return "";
+                    var parts = iso.split("T");
+                    return parts[0].slice(5) + " " + parts[1].slice(0, 5);
+                }
+
+                // ── Todo JSON 映射 ──
+                function parseTodos(text) {
+                    var raw = parseJson(text);
+                    var priorityIcon = { "P0": "🔴", "P1": "🟡", "P2": "🟢", "P3": "⚪" };
+                    var statusIcon = { "Pending": "⬜", "Done": "✅", "Archived": "📦" };
+                    return raw.map(function(item) {
+                        return {
+                            priority: priorityIcon[item.priority] || "🟢",
+                            status: statusIcon[item.status] || "⬜",
+                            title: item.title,
+                            tags: item.tags || [],
+                            due: item.due_date || "-"
+                        };
+                    });
+                }
+
+                // ── Idea JSON 映射 ──
+                function parseIdeas(text) {
+                    var raw = parseJson(text);
+                    return raw.map(function(item) {
+                        var time = formatDate(item.created_at);
+                        var subtitle = item.source ? "from: " + item.source + " · " + time : time;
+                        return {
+                            title: item.title,
+                            content: item.content || subtitle,
+                            tags: item.tags || [],
+                            time: time,
+                            source: item.source || "?"
+                        };
+                    });
+                }
+
+                // ── Log JSON 映射 ──
+                function parseLogs(text) {
+                    var raw = parseJson(text);
+                    return raw.map(function(item) {
+                        var time = formatDate(item.created_at);
+                        return {
+                            title: time + (item.mood ? " · " + item.mood : ""),
+                            content: item.content,
+                            tags: item.tags || [],
+                            time: time
+                        };
+                    });
                 }
             }
 
@@ -304,17 +349,6 @@ PanelWindow {
             QuickInput {
                 Layout.fillWidth: true
                 Layout.bottomMargin: 4
-            }
-        }
-    }
-
-    // ── 点击外部关闭 ──
-    MouseArea {
-        anchors.fill: parent
-        enabled: panelVisible
-        onClicked: {
-            if (mouse.x < backdrop.x || mouse.x > backdrop.x + backdrop.width) {
-                panelVisible = false;
             }
         }
     }

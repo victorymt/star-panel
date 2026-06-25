@@ -46,6 +46,7 @@ Item {
                 color: theme ? theme.text : "#cdd6f4"
                 font.pixelSize: 13
                 clip: true
+                activeFocusOnPress: true
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
@@ -53,6 +54,21 @@ Item {
                     color: theme ? theme.overlay0 : "#6c7086"
                     font.pixelSize: 13
                     visible: !parent.text
+                }
+
+                Keys.onReturnPressed: {
+                    var inputText = textInput.text.trim();
+                    if (inputText === "") return;
+
+                    var type = typeSelector.types[typeSelector.currentIndex];
+
+                    Quickshell.execDetached([
+                        "bash", "-c",
+                        "printf '%s\\n' " + quote(inputText) + " | starcatch pipe " + type
+                    ]);
+
+                    textInput.text = "";
+                    textInput.focus = false;
                 }
             }
 
@@ -80,24 +96,6 @@ Item {
                         ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
                         : "transparent"
                 }
-            }
-        }
-
-        // Enter 提交
-        Shortcut {
-            sequence: "Return"
-            enabled: textInput.activeFocus && textInput.text.trim() !== ""
-            onActivated: {
-                var text = textInput.text.trim();
-                var type = typeSelector.types[typeSelector.currentIndex];
-
-                Quickshell.execDetached([
-                    "bash", "-c",
-                    "echo " + quote(text) + " | starcatch pipe " + type
-                ]);
-
-                textInput.text = "";
-                textInput.focus = false;
             }
         }
 

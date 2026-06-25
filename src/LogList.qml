@@ -53,28 +53,28 @@ Item {
             required property int index
 
             width: ListView.view.width
-            implicitHeight: contentColumn.height + 16
+            implicitHeight: Math.max(56, contentColumn.implicitHeight + 16)
 
             contentItem: ColumnLayout {
                 id: contentColumn
                 spacing: 2
 
                 Text {
-                    text: modelData.title || ""
+                    text: modelData.content || ""
                     color: colors ? colors.text : "#cdd6f4"
                     font.pixelSize: 13
                     elide: Text.ElideRight
                     Layout.fillWidth: true
+                    maximumLineCount: 2
+                    wrapMode: Text.WordWrap
                 }
 
                 Text {
-                    text: modelData.content || ""
-                    color: colors ? colors.subtext0 : "#a6adc8"
-                    font.pixelSize: 11
+                    text: modelData.title || ""
+                    color: colors ? colors.overlay0 : "#6c7086"
+                    font.pixelSize: 10
                     elide: Text.ElideRight
                     Layout.fillWidth: true
-                    maximumLineCount: 2
-                    wrapMode: Text.WordWrap
                 }
             }
 
