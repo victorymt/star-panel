@@ -31,6 +31,11 @@ PanelWindow {
     anchors.right: true
     anchors.left: false
 
+    // ── 公开刷新接口（供子组件调用） ──
+    function reloadData() {
+        dataFetcher.reload();
+    }
+
     // ── 配置 & 主题色 ──
     Colors { id: theme }
     Config { id: cfg }

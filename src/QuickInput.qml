@@ -70,6 +70,9 @@ Item {
 
                     textInput.text = "";
                     textInput.focus = false;
+
+                    // 延迟刷新列表，等 starcatch pipe 写入完成
+                    refreshTimer.start();
                 }
             }
 
@@ -100,5 +103,12 @@ Item {
             }
         }
 
+        // 延迟刷新：等 starcatch pipe 写入完成后刷新面板数据
+        Timer {
+            id: refreshTimer
+            interval: 400
+            repeat: false
+            onTriggered: panel.reloadData()
+        }
     }
 }
