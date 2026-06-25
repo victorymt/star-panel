@@ -72,6 +72,7 @@ Item {
                     textInput.focus = false;
 
                     // 延迟刷新列表，等 starcatch pipe 写入完成
+                    refreshTimer.pendingType = type;
                     refreshTimer.start();
                 }
             }
@@ -108,7 +109,8 @@ Item {
             id: refreshTimer
             interval: 400
             repeat: false
-            onTriggered: panel.reloadData()
+            property string pendingType: ""
+            onTriggered: panel.reloadData(pendingType)
         }
     }
 }

@@ -32,8 +32,11 @@ PanelWindow {
     anchors.left: false
 
     // ── 公开刷新接口（供子组件调用） ──
-    function reloadData() {
-        dataFetcher.reload();
+    function reloadData(type) {
+        if (type === "todo")      { dataFetcher.fetchTodos(); }
+        else if (type === "idea") { dataFetcher.fetchIdeas(); }
+        else if (type === "log")  { dataFetcher.fetchLogs(); }
+        else                      { dataFetcher.reload(); }  // fallback: all
     }
 
     // ── 配置 & 主题色 ──
