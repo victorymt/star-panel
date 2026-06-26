@@ -10,6 +10,16 @@ Item {
 
     implicitHeight: 40
 
+    // 面板打开时自动聚焦输入框
+    Connections {
+        target: panel
+        function onPanelVisibleChanged() {
+            if (panel.panelVisible) {
+                textInput.forceActiveFocus();
+            }
+        }
+    }
+
     Rectangle {
         anchors.fill: parent
         radius: 10

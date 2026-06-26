@@ -211,9 +211,9 @@ PanelWindow {
                 property int currentIndex: cfg.defaultTab
 
                 property var tabs: [
-                    { label: "📋 待办" },
-                    { label: "💭 灵感" },
-                    { label: "📓 日志" }
+                    { label: "📋 待办 ⌃1" },
+                    { label: "💭 灵感 ⌃2" },
+                    { label: "📓 日志 ⌃3" }
                 ]
 
                 Repeater {
@@ -411,5 +411,20 @@ PanelWindow {
         sequence: "Escape"
         enabled: panelVisible
         onActivated: panelVisible = false
+    }
+
+    Shortcut { sequence: "Ctrl+1"; enabled: panelVisible; onActivated: tabBar.currentIndex = 0 }
+    Shortcut { sequence: "Ctrl+2"; enabled: panelVisible; onActivated: tabBar.currentIndex = 1 }
+    Shortcut { sequence: "Ctrl+3"; enabled: panelVisible; onActivated: tabBar.currentIndex = 2 }
+
+    Shortcut {
+        sequence: "Ctrl+Tab"
+        enabled: panelVisible
+        onActivated: tabBar.currentIndex = (tabBar.currentIndex + 1) % tabBar.tabs.length
+    }
+    Shortcut {
+        sequence: "Ctrl+Shift+Tab"
+        enabled: panelVisible
+        onActivated: tabBar.currentIndex = (tabBar.currentIndex - 1 + tabBar.tabs.length) % tabBar.tabs.length
     }
 }
