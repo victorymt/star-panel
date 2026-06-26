@@ -151,17 +151,33 @@ Item {
                     font.pixelSize: cfg.fontMedium
                 }
 
-                // 标题
-                Text {
-                    text: modelData.title
-                    color: colors ? colors.text : "#cdd6f4"
-                    font.pixelSize: cfg.fontBase
-                    elide: Text.ElideRight
+                // 标题 + 描述
+                ColumnLayout {
                     Layout.fillWidth: true
+                    spacing: 1
 
-                    // 已完成状态用删除线
-                    font.strikeout: modelData.status === "✅"
-                    opacity: modelData.status === "✅" ? 0.6 : 1.0
+                    Text {
+                        id: titleText
+                        text: modelData.title
+                        color: colors ? colors.text : "#cdd6f4"
+                        font.pixelSize: cfg.fontBase
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+
+                        // 已完成状态用删除线
+                        font.strikeout: modelData.status === "✅"
+                        opacity: modelData.status === "✅" ? 0.6 : 1.0
+                    }
+
+                    Text {
+                        text: modelData.description || ""
+                        color: colors ? colors.subtext0 : "#a6adc8"
+                        font.pixelSize: cfg.fontBase
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                        visible: modelData.description && modelData.description !== ""
+                        opacity: modelData.status === "✅" ? 0.5 : 0.85
+                    }
                 }
 
                 // 截止日期

@@ -345,6 +345,7 @@ PanelWindow {
                             priority: priorityIcon[item.priority] || "🟢",
                             status: statusIcon[item.status] || "⬜",
                             title: item.title,
+                            description: item.description || "",
                             tags: item.tags || [],
                             due: item.due_date || "-"
                         };
