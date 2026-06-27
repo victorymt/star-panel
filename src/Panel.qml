@@ -48,8 +48,10 @@ PanelWindow {
         function onThemeNameChanged() {
             if (cfg.themeName !== "") {
                 theme.applyPreset(cfg.themeName);
+                theme.stopPolling();
             } else {
                 theme.reloadMatugen();
+                theme.startPolling();
             }
         }
     }
@@ -79,7 +81,10 @@ PanelWindow {
 
     Component.onCompleted: {
         slideOffset = -(panelWidth + panelMargin * 2);
-        if (cfg.themeName !== "") theme.applyPreset(cfg.themeName);
+        if (cfg.themeName !== "") {
+            theme.applyPreset(cfg.themeName);
+            theme.stopPolling();
+        }
         Qt.callLater(() => dataFetcher.reload());
     }
 

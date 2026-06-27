@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "PostToolUse": {
+      "match": {
+        "glob": "src/**/*.qml"
+      },
+      "command": "bash restart.sh",
+      "description": "QML 文件修改后自动重启 star-panel"
+    },
+    "PreToolUse": {
+      "block": [
+        ".env",
+        "pnpm-lock.yaml",
+        "yarn.lock"
+      ],
+      "description": "阻止编辑敏感/锁文件"
+    }
+  }
+}

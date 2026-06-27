@@ -68,13 +68,22 @@ Popup {
                     { name: "latte",      label: "🥛 Latte" }
                 ]
 
-                // 设置当前选中项
-                Component.onCompleted: {
+                // 当前主题名到 ComboBox 索引的映射
+                function indexFromName(name) {
                     for (var i = 0; i < model.length; i++) {
-                        if (model[i].name === cfg.themeName) {
-                            currentIndex = i;
-                            break;
-                        }
+                        if (model[i].name === name) return i;
+                    }
+                    return 0;
+                }
+
+                Component.onCompleted: {
+                    currentIndex = indexFromName(cfg.themeName);
+                }
+
+                Connections {
+                    target: cfg
+                    function onThemeNameChanged() {
+                        themeCombo.currentIndex = themeCombo.indexFromName(cfg.themeName);
                     }
                 }
 

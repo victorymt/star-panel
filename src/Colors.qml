@@ -89,11 +89,23 @@ Item {
         themeReader.running = true;
     }
 
+    // 选中预设时停止轮询
+    function stopPolling() {
+        themePoller.stop();
+    }
+
+    // Matugen 模式下恢复轮询
+    function startPolling() {
+        themePoller.start();
+    }
+
+    readonly property string homeDir: Quickshell.env("HOME") || ""
+
     Process {
         id: themeReader
         command: ["bash", "-c",
-            "cat " + Quickshell.env("HOME") + "/.config/star-panel/theme.json 2>/dev/null" +
-            " || cat " + Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/qs_colors.json 2>/dev/null" +
+            "cat " + homeDir + "/.config/star-panel/theme.json 2>/dev/null" +
+            " || cat " + homeDir + "/.config/hypr/scripts/quickshell/qs_colors.json 2>/dev/null" +
             " || echo '{}'"]
         running: true
         stdout: StdioCollector {
@@ -101,34 +113,35 @@ Item {
                 if (typeof cfg !== "undefined" && cfg.themeName !== "") return;
                 try {
                     var c = JSON.parse(this.text.trim());
-                    if (c.base) root.base = c.base;
-                    if (c.mantle) root.mantle = c.mantle;
-                    if (c.crust) root.crust = c.crust;
-                    if (c.text) root.text = c.text;
-                    if (c.subtext0) root.subtext0 = c.subtext0;
-                    if (c.subtext1) root.subtext1 = c.subtext1;
-                    if (c.surface0) root.surface0 = c.surface0;
-                    if (c.surface1) root.surface1 = c.surface1;
-                    if (c.surface2) root.surface2 = c.surface2;
-                    if (c.overlay0) root.overlay0 = c.overlay0;
-                    if (c.overlay1) root.overlay1 = c.overlay1;
-                    if (c.overlay2) root.overlay2 = c.overlay2;
-                    if (c.blue) root.blue = c.blue;
-                    if (c.sapphire) root.sapphire = c.sapphire;
-                    if (c.peach) root.peach = c.peach;
-                    if (c.green) root.green = c.green;
-                    if (c.red) root.red = c.red;
-                    if (c.mauve) root.mauve = c.mauve;
-                    if (c.pink) root.pink = c.pink;
-                    if (c.yellow) root.yellow = c.yellow;
-                    if (c.maroon) root.maroon = c.maroon;
-                    if (c.teal) root.teal = c.teal;
+                    if (c.base !== undefined) root.base = c.base;
+                    if (c.mantle !== undefined) root.mantle = c.mantle;
+                    if (c.crust !== undefined) root.crust = c.crust;
+                    if (c.text !== undefined) root.text = c.text;
+                    if (c.subtext0 !== undefined) root.subtext0 = c.subtext0;
+                    if (c.subtext1 !== undefined) root.subtext1 = c.subtext1;
+                    if (c.surface0 !== undefined) root.surface0 = c.surface0;
+                    if (c.surface1 !== undefined) root.surface1 = c.surface1;
+                    if (c.surface2 !== undefined) root.surface2 = c.surface2;
+                    if (c.overlay0 !== undefined) root.overlay0 = c.overlay0;
+                    if (c.overlay1 !== undefined) root.overlay1 = c.overlay1;
+                    if (c.overlay2 !== undefined) root.overlay2 = c.overlay2;
+                    if (c.blue !== undefined) root.blue = c.blue;
+                    if (c.sapphire !== undefined) root.sapphire = c.sapphire;
+                    if (c.peach !== undefined) root.peach = c.peach;
+                    if (c.green !== undefined) root.green = c.green;
+                    if (c.red !== undefined) root.red = c.red;
+                    if (c.mauve !== undefined) root.mauve = c.mauve;
+                    if (c.pink !== undefined) root.pink = c.pink;
+                    if (c.yellow !== undefined) root.yellow = c.yellow;
+                    if (c.maroon !== undefined) root.maroon = c.maroon;
+                    if (c.teal !== undefined) root.teal = c.teal;
                 } catch(e) {}
             }
         }
     }
 
     Timer {
+        id: themePoller
         interval: 3000
         running: true
         repeat: true

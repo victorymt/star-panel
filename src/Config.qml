@@ -14,9 +14,6 @@ Item {
 
     readonly property real defaultPanelWidth: 420
 
-    // ── 数据刷新间隔（毫秒） ──
-    property real refreshInterval: 30000
-
     // ── 默认显示的标签页 ──
     property int defaultTab: 0  // 0=todo, 1=idea, 2=log
 
@@ -42,9 +39,6 @@ Item {
     // ── 持久化路径 ──
     readonly property string settingsDir: homeDir + "/.config/star-panel"
     readonly property string settingsFile: settingsDir + "/settings.json"
-
-    // ── CLI 命令 ──
-    property string starcatchBin: "starcatch"
 
     // ── 用户 Home 目录 ──
     readonly property string homeDir: Quickshell.env("HOME")
