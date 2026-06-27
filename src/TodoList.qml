@@ -186,8 +186,10 @@ Item {
                     color: {
                         if (!modelData.due || modelData.due === "-") return "transparent";
                         var today = new Date();
-                        var due = Date.parse(modelData.due);
-                        var diff = (due - today) / (1000 * 60 * 60 * 24);
+                        today.setHours(0, 0, 0, 0);
+                        var dueParts = modelData.due.split("-");
+                        var due = new Date(parseInt(dueParts[0]), parseInt(dueParts[1]) - 1, parseInt(dueParts[2]));
+                        var diff = Math.round((due - today) / (1000 * 60 * 60 * 24));
                         if (diff < 0) return colors ? colors.red : "#f38ba8";
                         if (diff < 2) return colors ? colors.peach : "#fab387";
                         return colors ? colors.overlay0 : "#6c7086";

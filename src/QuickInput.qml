@@ -10,14 +10,21 @@ Item {
 
     implicitHeight: 40
 
-    // 面板打开时自动聚焦输入框
+    // 面板打开时延迟聚焦，配合滑入动画
     Connections {
         target: panel
         function onPanelVisibleChanged() {
             if (panel.panelVisible) {
-                textInput.forceActiveFocus();
+                focusTimer.start();
             }
         }
+    }
+
+    Timer {
+        id: focusTimer
+        interval: cfg.animationDuration
+        repeat: false
+        onTriggered: textInput.forceActiveFocus()
     }
 
     Rectangle {
@@ -42,22 +49,17 @@ Item {
             }
 
             // 快速输入框
-            TextInput {
+            TextField {
                 id: textInput
                 Layout.fillWidth: true
                 verticalAlignment: Text.AlignVCenter
                 color: theme ? theme.text : "#cdd6f4"
+                placeholderTextColor: theme ? theme.overlay0 : "#6c7086"
+                placeholderText: "快速捕获... Tab 切换类型 · Enter 提交"
                 font.pixelSize: cfg.fontBase
                 clip: true
                 activeFocusOnPress: true
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "快速捕获... Tab 切换类型 · Enter 提交"
-                    color: theme ? theme.overlay0 : "#6c7086"
-                    font.pixelSize: cfg.fontBase
-                    visible: !parent.text
-                }
+                background: null
 
                 // Tab 切换类型
                 Keys.onPressed: function(event) {

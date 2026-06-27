@@ -84,10 +84,15 @@ Item {
             fontXl: fontXl
         };
         var json = JSON.stringify(data, null, 2);
-        // JSON 仅含数字，无双引号冲突，单引号包裹即可
+        var safeDir = settingsDir.replace(/'/g, "'\\''");
+        var safeFile = settingsFile.replace(/'/g, "'\\''");
         Quickshell.execDetached([
             "bash", "-c",
-            "mkdir -p " + settingsDir + " && printf '%s\\n' '" + json.replace(/'/g, "'\\''") + "' > " + settingsFile
+            "mkdir -p '" + safeDir + "' && printf '%s\\n' " + shellQuote(json) + " > '" + safeFile + "'"
         ]);
+    }
+
+    function shellQuote(s) {
+        return "'" + s.replace(/'/g, "'\\''") + "'";
     }
 }

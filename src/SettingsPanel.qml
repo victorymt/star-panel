@@ -350,6 +350,7 @@ Popup {
                 cfg.fontMedium = cfg.defaultFontMedium;
                 cfg.fontLarge  = cfg.defaultFontLarge;
                 cfg.fontXl     = cfg.defaultFontXl;
+                cfg.themeName  = "";
                 cfg.saveSettings();
             }
 

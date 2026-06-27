@@ -25,11 +25,10 @@ PanelWindow {
     implicitHeight: screen.height
     color: "transparent"
 
-    // 让窗口靠右填充
+    // PanelWindow.anchors 将窗口贴附到屏幕边缘（布尔值，非 Qt Item.anchors）
     anchors.top: true
     anchors.bottom: true
     anchors.right: true
-    anchors.left: false
 
     // ── 公开刷新接口（供子组件调用） ──
     function reloadData(type) {
@@ -146,7 +145,6 @@ PanelWindow {
                 Item { Layout.fillWidth: true }
 
                 Button {
-                    text: "↻"
                     flat: true
                     onClicked: dataFetcher.reload()
                     contentItem: Text {
@@ -165,7 +163,6 @@ PanelWindow {
                 }
 
                 Button {
-                    text: "⚙"
                     flat: true
                     onClicked: settingsPanel.open()
                     contentItem: Text {
@@ -184,7 +181,6 @@ PanelWindow {
                 }
 
                 Button {
-                    text: "✕"
                     flat: true
                     onClicked: panel.panelVisible = false
                     contentItem: Text {
@@ -260,12 +256,15 @@ PanelWindow {
                 property var ideas: []
                 property var logs: []
                 property bool loading: false
+                property int pendingCount: 0
 
                 function reload() {
                     loading = true;
+                    pendingCount = 3;
                     fetchTodos();
                     fetchIdeas();
                     fetchLogs();
+                    fetchTimeout.start();
                 }
 
                 function fetchTodos() {
@@ -317,8 +316,23 @@ PanelWindow {
                 }
 
                 function checkDone() {
-                    if (!todoProcess.running && !ideaProcess.running && !logProcess.running) {
-                        dataFetcher.loading = false;
+                    pendingCount--;
+                    if (pendingCount <= 0) {
+                        pendingCount = 0;
+                        loading = false;
+                        fetchTimeout.stop();
+                    }
+                }
+
+                Timer {
+                    id: fetchTimeout
+                    interval: 15000
+                    repeat: false
+                    onTriggered: {
+                        if (dataFetcher.loading) {
+                            dataFetcher.loading = false;
+                            dataFetcher.pendingCount = 0;
+                        }
                     }
                 }
 
@@ -330,6 +344,7 @@ PanelWindow {
                 function formatDate(iso) {
                     if (!iso) return "";
                     var parts = iso.split("T");
+                    if (parts.length < 2) return parts[0] || "";
                     return parts[0].slice(5) + " " + parts[1].slice(0, 5);
                 }
 
