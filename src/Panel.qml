@@ -38,6 +38,46 @@ PanelWindow {
         else                      { dataFetcher.reload(); }  // fallback: all
     }
 
+    // ── 相对日期转换（供子组件调用） ──
+    function dateDiffDays(due) {
+        if (!due || due === "-") return null;
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var parts = due.split("-");
+        var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        return Math.round((d - today) / (1000 * 60 * 60 * 24));
+    }
+
+    function getDueText(due) {
+        var diff = dateDiffDays(due);
+        if (diff === null) return "";
+        if (diff === 0) return "🔥 今天";
+        if (diff === 1) return "📅 明天";
+        if (diff === 2) return "📅 后天";
+        if (diff < 0) return "⚠️ " + due.slice(5);
+        return due.slice(5);
+    }
+
+    function getDueColor(due, clr) {
+        var diff = dateDiffDays(due);
+        if (diff === null) return "transparent";
+        if (diff < 0) return clr ? clr.red : "#f38ba8";
+        if (diff < 2) return clr ? clr.peach : "#fab387";
+        return clr ? clr.overlay0 : "#6c7086";
+    }
+
+    function getDueDisplay(due) {
+        if (!due || due === "-") return "";
+        var diff = dateDiffDays(due);
+        if (diff === null) return "";
+        var dateStr = due.slice(5);
+        if (diff === 0) return dateStr + " (🔥 今天)";
+        if (diff === 1) return dateStr + " (📅 明天)";
+        if (diff === 2) return dateStr + " (📅 后天)";
+        if (diff < 0) return dateStr + " (⚠️ 已过期 " + Math.abs(diff) + " 天)";
+        return dateStr;
+    }
+
     // ── 配置 & 主题色 ──
     Colors { id: theme }
     Config { id: cfg }
@@ -217,9 +257,9 @@ PanelWindow {
                 property int currentIndex: cfg.defaultTab
 
                 property var tabs: [
-                    { label: "📋 待办 ⌃1" },
-                    { label: "💭 灵感 ⌃2" },
-                    { label: "📓 日志 ⌃3" }
+                    { label: "📋 待办" },
+                    { label: "💭 灵感" },
+                    { label: "📓 日志" }
                 ]
 
                 Repeater {
@@ -247,6 +287,12 @@ PanelWindow {
                             color: tabBar.currentIndex === index
                                 ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
                                 : "transparent"
+                        }
+
+                        ToolTip {
+                            text: "Ctrl+" + (index + 1)
+                            visible: parent.hovered
+                            delay: 500
                         }
                     }
                 }
@@ -460,6 +506,7 @@ PanelWindow {
 
             // ── 底部快速输入 ──
             QuickInput {
+                id: quickInput
                 Layout.fillWidth: true
                 Layout.bottomMargin: 4
             }
@@ -489,5 +536,42 @@ PanelWindow {
         sequence: "Ctrl+Shift+Tab"
         enabled: panelVisible
         onActivated: tabBar.currentIndex = (tabBar.currentIndex - 1 + tabBar.tabs.length) % tabBar.tabs.length
+    }
+
+    // ── 搜索快捷 ──
+    Shortcut {
+        sequence: "/"
+        enabled: panelVisible && !quickInput.inputActive
+        onActivated: {
+            if (tabBar.currentIndex === 0) todoList.focusSearch();
+            else if (tabBar.currentIndex === 1) ideaList.focusSearch();
+            else logList.focusSearch();
+        }
+    }
+    Shortcut {
+        sequence: "Ctrl+F"
+        enabled: panelVisible && !quickInput.inputActive
+        onActivated: {
+            if (tabBar.currentIndex === 0) todoList.focusSearch();
+            else if (tabBar.currentIndex === 1) ideaList.focusSearch();
+            else logList.focusSearch();
+        }
+    }
+
+    // ── 操作快捷 ──
+    Shortcut {
+        sequence: "Ctrl+R"
+        enabled: panelVisible
+        onActivated: dataFetcher.reload()
+    }
+    Shortcut {
+        sequence: "Ctrl+S"
+        enabled: panelVisible
+        onActivated: settingsPanel.visible ? settingsPanel.close() : settingsPanel.open()
+    }
+    Shortcut {
+        sequence: "Ctrl+Q"
+        enabled: panelVisible
+        onActivated: panelVisible = false
     }
 }

@@ -11,6 +11,9 @@ Item {
     property bool loading: false
     readonly property var colors: theme
     property string searchText: ""
+    property bool searchActive: searchField.activeFocus
+
+    function focusSearch() { searchField.forceActiveFocus(); }
 
     // ── 搜索框 ──
     TextField {
@@ -24,11 +27,46 @@ Item {
         color: colors ? colors.text : "#cdd6f4"
         font.pixelSize: cfg.fontSmall
         verticalAlignment: Text.AlignVCenter
+        rightPadding: clearBtn.visible ? 20 : 6
         background: Rectangle {
             radius: 6
-            color: Qt.rgba(colors.surface0.r, colors.surface0.g, colors.surface0.b, 0.4)
+            color: searchField.activeFocus
+                ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.4)
+                : Qt.rgba(colors.surface0.r, colors.surface0.g, colors.surface0.b, 0.3)
+            border.width: searchField.activeFocus ? 1 : 0
+            border.color: searchField.activeFocus
+                ? Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.3)
+                : "transparent"
         }
         onTextChanged: root.searchText = text
+
+        KeyNavigation.tab: listView
+        Keys.onPressed: function(event) {
+            if (event.key === Qt.Key_Escape) {
+                if (searchField.text !== "") {
+                    searchField.text = "";
+                } else {
+                    searchField.focus = false;
+                    listView.forceActiveFocus();
+                }
+                event.accepted = true;
+            }
+        }
+
+        Text {
+            id: clearBtn
+            text: "✕"
+            color: colors ? colors.overlay0 : "#6c7086"
+            font.pixelSize: cfg.fontTiny
+            anchors.right: parent.right
+            anchors.rightMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
+            visible: searchField.text !== ""
+            MouseArea {
+                anchors.fill: parent
+                onClicked: { searchField.text = ""; searchField.focus = false; }
+            }
+        }
     }
 
     // ── 空状态 ──
@@ -61,6 +99,7 @@ Item {
 
     // ── 日志列表 ──
     ListView {
+        id: listView
         anchors.top: searchField.bottom
         anchors.topMargin: 4
         anchors.left: parent.left
@@ -77,6 +116,32 @@ Item {
         }
         clip: true
         spacing: 4
+        focus: true
+        currentIndex: -1
+        onModelChanged: currentIndex = -1
+
+        KeyNavigation.tab: searchField
+        KeyNavigation.backtab: searchField
+
+        Keys.onPressed: function(event) {
+            if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+                if (currentIndex < model.length - 1) currentIndex++;
+                positionViewAtIndex(currentIndex, ListView.Contain);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+                if (currentIndex > 0) currentIndex--;
+                positionViewAtIndex(currentIndex, ListView.Contain);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                if (currentIndex >= 0 && currentIndex < model.length) {
+                    var item = model[currentIndex];
+                    detailPopup.type = "log";
+                    detailPopup.itemData = item;
+                    detailPopup.open();
+                }
+                event.accepted = true;
+            }
+        }
 
         ScrollBar.vertical: ScrollBar {
             policy: ScrollBar.AsNeeded
@@ -120,10 +185,20 @@ Item {
 
             background: Rectangle {
                 radius: 8
-                color: hovered
-                    ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.3)
-                    : "transparent"
+                color: ListView.isCurrentItem
+                    ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.4)
+                    : hovered
+                        ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.3)
+                        : "transparent"
+            }
+
+            onClicked: {
+                detailPopup.type = "log";
+                detailPopup.itemData = modelData;
+                detailPopup.open();
             }
         }
     }
+
+    DetailPopup { id: detailPopup }
 }

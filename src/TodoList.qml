@@ -12,6 +12,9 @@ Item {
     property string filterStatus: cfg.todoFilter
     readonly property var colors: theme
     property string searchText: ""
+    property bool searchActive: searchField.activeFocus
+
+    function focusSearch() { searchField.forceActiveFocus(); }
 
     // 过滤后的列表（状态 + 搜索）
     readonly property var filteredItems: {
@@ -34,7 +37,7 @@ Item {
         }
     }
 
-    // ── 过滤器栏 ──
+    // ── 过滤器栏（含搜索） ──
     RowLayout {
         id: filterBar
         anchors.top: parent.top
@@ -56,9 +59,9 @@ Item {
                 required property var modelData
                 required property int index
 
-                Layout.fillWidth: true
                 flat: true
                 onClicked: root.filterStatus = modelData.status
+                Layout.preferredWidth: implicitWidth
 
                 contentItem: Text {
                     text: modelData.label
@@ -79,31 +82,69 @@ Item {
                 }
             }
         }
-    }
 
-    // ── 搜索框 ──
-    TextField {
-        id: searchField
-        anchors.top: filterBar.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.topMargin: 4
-        height: 28
-        placeholderText: "🔍 搜索待办..."
-        placeholderTextColor: colors ? colors.overlay0 : "#6c7086"
-        color: colors ? colors.text : "#cdd6f4"
-        font.pixelSize: cfg.fontSmall
-        verticalAlignment: Text.AlignVCenter
-        background: Rectangle {
-            radius: 6
-            color: Qt.rgba(colors.surface0.r, colors.surface0.g, colors.surface0.b, 0.4)
+        Item { Layout.fillWidth: true }
+
+        // 嵌入式搜索框
+        TextField {
+            id: searchField
+            Layout.preferredWidth: 120
+            Layout.maximumWidth: 180
+            height: 26
+            placeholderText: "🔍 搜索"
+            placeholderTextColor: colors ? colors.overlay0 : "#6c7086"
+            color: colors ? colors.text : "#cdd6f4"
+            font.pixelSize: cfg.fontTiny
+            verticalAlignment: Text.AlignVCenter
+            leftPadding: 6
+            rightPadding: clearBtn.visible ? 20 : 6
+            background: Rectangle {
+                radius: 6
+                color: searchField.activeFocus
+                    ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.4)
+                    : Qt.rgba(colors.surface0.r, colors.surface0.g, colors.surface0.b, 0.3)
+                border.width: searchField.activeFocus ? 1 : 0
+                border.color: searchField.activeFocus
+                    ? Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.3)
+                    : "transparent"
+            }
+            onTextChanged: root.searchText = text
+
+            KeyNavigation.tab: listView
+            KeyNavigation.backtab: filterBar
+
+            Keys.onPressed: function(event) {
+                if (event.key === Qt.Key_Escape) {
+                    if (searchField.text !== "") {
+                        searchField.text = "";
+                    } else {
+                        searchField.focus = false;
+                        listView.forceActiveFocus();
+                    }
+                    event.accepted = true;
+                }
+            }
+
+            Text {
+                id: clearBtn
+                text: "✕"
+                color: colors ? colors.overlay0 : "#6c7086"
+                font.pixelSize: cfg.fontTiny
+                anchors.right: parent.right
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                visible: searchField.text !== ""
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: { searchField.text = ""; searchField.focus = false; }
+                }
+            }
         }
-        onTextChanged: root.searchText = text
     }
 
     // ── 空状态 ──
     Rectangle {
-        anchors.top: searchField.bottom
+        anchors.top: filterBar.bottom
         anchors.topMargin: 8
         anchors.left: parent.left
         anchors.right: parent.right
@@ -139,7 +180,7 @@ Item {
     // ── 待办列表 ──
     ListView {
         id: listView
-        anchors.top: searchField.bottom
+        anchors.top: filterBar.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
@@ -148,6 +189,32 @@ Item {
         model: root.filteredItems
         clip: true
         spacing: 4
+        focus: true
+        currentIndex: -1
+        onModelChanged: currentIndex = -1
+
+        KeyNavigation.tab: searchField
+        KeyNavigation.backtab: searchField
+
+        Keys.onPressed: function(event) {
+            if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+                if (currentIndex < model.length - 1) currentIndex++;
+                positionViewAtIndex(currentIndex, ListView.Contain);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+                if (currentIndex > 0) currentIndex--;
+                positionViewAtIndex(currentIndex, ListView.Contain);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                if (currentIndex >= 0 && currentIndex < model.length) {
+                    var item = model[currentIndex];
+                    detailPopup.type = "todo";
+                    detailPopup.itemData = item;
+                    detailPopup.open();
+                }
+                event.accepted = true;
+            }
+        }
 
         ScrollBar.vertical: ScrollBar {
             policy: ScrollBar.AsNeeded
@@ -166,7 +233,7 @@ Item {
 
                 // 优先级指示器
                 Rectangle {
-                    width: 4
+                    width: 6
                     height: parent.height
                     radius: 2
                     color: {
@@ -223,49 +290,28 @@ Item {
 
                 // 截止日期
                 Text {
-                    text: modelData.due && modelData.due !== "-" ? modelData.due : ""
-                    color: {
-                        if (!modelData.due || modelData.due === "-") return "transparent";
-                        var today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        var dueParts = modelData.due.split("-");
-                        var due = new Date(parseInt(dueParts[0]), parseInt(dueParts[1]) - 1, parseInt(dueParts[2]));
-                        var diff = Math.round((due - today) / (1000 * 60 * 60 * 24));
-                        if (diff < 0) return colors ? colors.red : "#f38ba8";
-                        if (diff < 2) return colors ? colors.peach : "#fab387";
-                        return colors ? colors.overlay0 : "#6c7086";
-                    }
+                    text: panel.getDueText(modelData.due)
+                    color: panel.getDueColor(modelData.due, colors)
                     font.pixelSize: cfg.fontSmall
                 }
             }
 
             background: Rectangle {
                 radius: 8
-                color: hovered
-                    ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.3)
-                    : "transparent"
+                color: ListView.isCurrentItem
+                    ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.4)
+                    : hovered
+                        ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.3)
+                        : "transparent"
             }
 
-            // 点击循环状态: Pending → Done → Archived → Pending
             onClicked: {
-                var id = modelData.id;
-                var status = modelData.rawStatus;
-                var cmd;
-                if (status === "Pending")   { cmd = "done"; }
-                else if (status === "Done") { cmd = "archive"; }
-                else                        { cmd = "reopen"; }
-
-                Quickshell.execDetached(["starcatch", "todo", cmd, id]);
-                todoRefreshTimer.start();
+                detailPopup.type = "todo";
+                detailPopup.itemData = modelData;
+                detailPopup.open();
             }
         }
     }
 
-    // 延迟刷新：等 starcatch todo done/archive/reopen 完成
-    Timer {
-        id: todoRefreshTimer
-        interval: 300
-        repeat: false
-        onTriggered: panel.reloadData("todo")
-    }
+    DetailPopup { id: detailPopup }
 }
