@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { parseJson, formatDate, parseTodos, parseIdeas, parseLogs, shellQuote } = require("./parsers");
+const { parseJson, formatDate, parseTodos, parseIdeas, parseLogs, shellQuote, filterByStatus, filterByText } = require("./parsers");
 
 let passed = 0;
 function test(desc, fn) { try { fn(); passed++; } catch(e) { console.error("FAIL:", desc); throw e; } }
@@ -80,6 +80,54 @@ test("parseLogs with mood", () => {
   assert.deepStrictEqual(logs[0].tags, ["life"]);
   assert.strictEqual(logs[1].title, "06-26 12:00");
   assert.strictEqual(logs[1].tags.length, 0);
+});
+
+// ── filterByStatus ──
+test("filterByStatus Pending", () => {
+  const items = [
+    { rawStatus: "Pending", title: "A" },
+    { rawStatus: "Done", title: "B" },
+    { rawStatus: "Pending", title: "C" }
+  ];
+  assert.strictEqual(filterByStatus(items, "Pending").length, 2);
+  assert.strictEqual(filterByStatus(items, "Done").length, 1);
+  assert.strictEqual(filterByStatus(items, "Archived").length, 0);
+});
+test("filterByStatus empty input", () => assert.deepStrictEqual(filterByStatus([], "Pending"), []));
+
+// ── filterByText ──
+test("filterByText matches title", () => {
+  const items = [
+    { title: "买奶茶", description: "" },
+    { title: "写代码", description: "修 bug" }
+  ];
+  assert.strictEqual(filterByText(items, "奶茶").length, 1);
+  assert.strictEqual(filterByText(items, "bug").length, 1);
+  assert.strictEqual(filterByText(items, "买").length, 1);
+});
+test("filterByText matches description", () => {
+  const items = [
+    { title: "Task", description: "买东西" },
+    { title: "Other", description: "无关" }
+  ];
+  assert.strictEqual(filterByText(items, "东西").length, 1);
+});
+test("filterByText case insensitive", () => {
+  const items = [{ title: "HELLO World", description: "" }];
+  assert.strictEqual(filterByText(items, "hello").length, 1);
+  assert.strictEqual(filterByText(items, "WORLD").length, 1);
+});
+test("filterByText empty query", () => {
+  const items = [{ title: "A" }, { title: "B" }];
+  assert.strictEqual(filterByText(items, "").length, 2);
+  assert.strictEqual(filterByText(items, "  ").length, 2);
+  assert.strictEqual(filterByText(items, null).length, 2);
+  assert.strictEqual(filterByText(items, undefined).length, 2);
+});
+test("filterByText no match", () => assert.strictEqual(filterByText([{ title: "A" }], "Z").length, 0));
+test("filterByText matches content field", () => {
+  const items = [{ title: "Idea", content: "创新思维" }];
+  assert.strictEqual(filterByText(items, "创新").length, 1);
 });
 
 // ── shellQuote ──

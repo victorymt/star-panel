@@ -234,6 +234,73 @@ Popup {
             }
         }
 
+        // ── 动画速度 ──
+        RowLayout {
+            spacing: 8
+
+            Text {
+                text: "动画速度"
+                color: theme.subtext0
+                font.pixelSize: cfg.fontSmall
+                Layout.preferredWidth: 100
+            }
+
+            Text {
+                text: cfg.animationDuration + "ms"
+                color: theme.text
+                font.pixelSize: cfg.fontBase
+                font.bold: true
+                Layout.preferredWidth: 48
+                horizontalAlignment: Text.AlignHCenter
+            }
+
+            Button {
+                flat: true
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+                enabled: cfg.animationDuration > 100
+                onClicked: { cfg.animationDuration -= 20; cfg.saveSettings(); }
+
+                contentItem: Text {
+                    text: "−"
+                    color: enabled ? theme.subtext0 : theme.overlay0
+                    font.pixelSize: cfg.fontBase
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
+                        : "transparent"
+                }
+            }
+
+            Button {
+                flat: true
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+                enabled: cfg.animationDuration < 600
+                onClicked: { cfg.animationDuration += 20; cfg.saveSettings(); }
+
+                contentItem: Text {
+                    text: "+"
+                    color: enabled ? theme.subtext0 : theme.overlay0
+                    font.pixelSize: cfg.fontBase
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
+                        : "transparent"
+                }
+            }
+        }
+
         // 分隔线
         Rectangle {
             Layout.fillWidth: true
@@ -353,6 +420,7 @@ Popup {
             Layout.fillWidth: true
             onClicked: {
                 cfg.panelWidth = cfg.defaultPanelWidth;
+                cfg.animationDuration = 280;
                 cfg.fontTiny   = cfg.defaultFontTiny;
                 cfg.fontSmall  = cfg.defaultFontSmall;
                 cfg.fontBase   = cfg.defaultFontBase;
@@ -360,6 +428,7 @@ Popup {
                 cfg.fontLarge  = cfg.defaultFontLarge;
                 cfg.fontXl     = cfg.defaultFontXl;
                 cfg.themeName  = "";
+                cfg.todoFilter = "Pending";
                 cfg.saveSettings();
             }
 

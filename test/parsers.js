@@ -62,4 +62,19 @@ function shellQuote(s) {
   return "'" + s.replace(/'/g, "'\\''") + "'";
 }
 
-module.exports = { parseJson, formatDate, parseTodos, parseIdeas, parseLogs, shellQuote };
+// Search/filter helpers (mirrors QML logic in TodoList/IdeaList/LogList)
+function filterByStatus(items, status) {
+  return items.filter(function(item) { return item.rawStatus === status; });
+}
+
+function filterByText(items, query) {
+  if (!query || !query.trim()) return items;
+  var q = query.trim().toLowerCase();
+  return items.filter(function(item) {
+    return (item.title && item.title.toLowerCase().indexOf(q) >= 0)
+        || (item.description && item.description.toLowerCase().indexOf(q) >= 0)
+        || (item.content && item.content.toLowerCase().indexOf(q) >= 0);
+  });
+}
+
+module.exports = { parseJson, formatDate, parseTodos, parseIdeas, parseLogs, shellQuote, filterByStatus, filterByText };

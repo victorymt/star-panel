@@ -70,6 +70,11 @@ PanelWindow {
 
     onPanelVisibleChanged: {
         slideOffset = panelVisible ? 0 : -(panelWidth + panelMargin * 2);
+        if (panelVisible) {
+            autoRefreshTimer.start();
+        } else {
+            autoRefreshTimer.stop();
+        }
     }
 
     // 宽度变化时更新隐藏位置，防止面板异常显示
@@ -262,9 +267,11 @@ PanelWindow {
                 property var logs: []
                 property bool loading: false
                 property int pendingCount: 0
+                property string error: ""
 
                 function reload() {
                     loading = true;
+                    error = "";
                     pendingCount = 3;
                     fetchTodos();
                     fetchIdeas();
@@ -290,6 +297,8 @@ PanelWindow {
                     running: false
                     stdout: StdioCollector {
                         onStreamFinished: {
+                            if (!this.text.trim()) dataFetcher.error = "待办数据为空，请确认 Starcatch 可用";
+                            else dataFetcher.error = "";
                             dataFetcher.todos = dataFetcher.parseTodos(this.text);
                             dataFetcher.checkDone();
                         }
@@ -302,6 +311,8 @@ PanelWindow {
                     running: false
                     stdout: StdioCollector {
                         onStreamFinished: {
+                            if (!this.text.trim()) dataFetcher.error = "灵感数据为空，请确认 Starcatch 可用";
+                            else dataFetcher.error = "";
                             dataFetcher.ideas = dataFetcher.parseIdeas(this.text);
                             dataFetcher.checkDone();
                         }
@@ -314,6 +325,8 @@ PanelWindow {
                     running: false
                     stdout: StdioCollector {
                         onStreamFinished: {
+                            if (!this.text.trim()) dataFetcher.error = "日志数据为空，请确认 Starcatch 可用";
+                            else dataFetcher.error = "";
                             dataFetcher.logs = dataFetcher.parseLogs(this.text);
                             dataFetcher.checkDone();
                         }
@@ -337,7 +350,18 @@ PanelWindow {
                         if (dataFetcher.loading) {
                             dataFetcher.loading = false;
                             dataFetcher.pendingCount = 0;
+                            dataFetcher.error = "数据获取超时，请检查 Starcatch 是否运行";
                         }
+                    }
+                }
+
+                // 自动刷新（面板可见期间 30s 循环）
+                Timer {
+                    id: autoRefreshTimer
+                    interval: 30000
+                    repeat: true
+                    onTriggered: {
+                        if (panel.panelVisible) dataFetcher.reload();
                     }
                 }
 
@@ -400,6 +424,25 @@ PanelWindow {
                             time: time
                         };
                     });
+                }
+            }
+
+            // ── 错误提示 ──
+            Rectangle {
+                Layout.fillWidth: true
+                visible: dataFetcher.error !== ""
+                height: visible ? errorText.implicitHeight + 12 : 0
+                radius: 6
+                color: Qt.rgba(theme.red.r, theme.red.g, theme.red.b, 0.12)
+                Text {
+                    id: errorText
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    text: dataFetcher.error
+                    color: theme.red
+                    font.pixelSize: cfg.fontSmall
+                    wrapMode: Text.WordWrap
+                    verticalAlignment: Text.AlignVCenter
                 }
             }
 

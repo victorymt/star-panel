@@ -36,6 +36,9 @@ Item {
     // ── 主题 ──
     property string themeName: ""  // 空=Matugen自动, mocha/latte/frappe/macchiato=预设
 
+    // ── 待办过滤器状态 ──
+    property string todoFilter: "Pending"
+
     // ── 持久化路径 ──
     readonly property string settingsDir: homeDir + "/.config/star-panel"
     readonly property string settingsFile: settingsDir + "/settings.json"
@@ -59,31 +62,44 @@ Item {
                     if (typeof data.fontLarge  === "number") config.fontLarge  = data.fontLarge;
                     if (typeof data.fontXl     === "number") config.fontXl     = data.fontXl;
                     if (typeof data.panelWidth === "number") config.panelWidth = data.panelWidth;
+                    if (typeof data.animationDuration === "number") config.animationDuration = data.animationDuration;
                     if (typeof data.themeName  === "string") config.themeName  = data.themeName;
+                    if (typeof data.todoFilter === "string") config.todoFilter = data.todoFilter;
                 } catch (e) {}
             }
         }
     }
 
-    // ── 持久化保存 ──
+    // ── 持久化保存（300ms 防抖）──
     function saveSettings() {
-        var data = {
-            themeName: themeName,
-            panelWidth: panelWidth,
-            fontTiny: fontTiny,
-            fontSmall: fontSmall,
-            fontBase: fontBase,
-            fontMedium: fontMedium,
-            fontLarge: fontLarge,
-            fontXl: fontXl
-        };
-        var json = JSON.stringify(data, null, 2);
-        var safeDir = settingsDir.replace(/'/g, "'\\''");
-        var safeFile = settingsFile.replace(/'/g, "'\\''");
-        Quickshell.execDetached([
-            "bash", "-c",
-            "mkdir -p '" + safeDir + "' && printf '%s\\n' " + shellQuote(json) + " > '" + safeFile + "'"
-        ]);
+        saveDebounce.restart();
+    }
+
+    Timer {
+        id: saveDebounce
+        interval: 300
+        repeat: false
+        onTriggered: {
+            var data = {
+                themeName: themeName,
+                panelWidth: panelWidth,
+                animationDuration: animationDuration,
+                fontTiny: fontTiny,
+                fontSmall: fontSmall,
+                fontBase: fontBase,
+                fontMedium: fontMedium,
+                fontLarge: fontLarge,
+                fontXl: fontXl,
+                todoFilter: todoFilter
+            };
+            var json = JSON.stringify(data, null, 2);
+            var safeDir = settingsDir.replace(/'/g, "'\\''");
+            var safeFile = settingsFile.replace(/'/g, "'\\''");
+            Quickshell.execDetached([
+                "bash", "-c",
+                "mkdir -p '" + safeDir + "' && printf '%s\\n' " + shellQuote(json) + " > '" + safeFile + "'"
+            ]);
+        }
     }
 
     function shellQuote(s) {

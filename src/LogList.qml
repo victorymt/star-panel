@@ -10,6 +10,26 @@ Item {
     property var items: []
     property bool loading: false
     readonly property var colors: theme
+    property string searchText: ""
+
+    // ── 搜索框 ──
+    TextField {
+        id: searchField
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 28
+        placeholderText: "🔍 搜索日志..."
+        placeholderTextColor: colors ? colors.overlay0 : "#6c7086"
+        color: colors ? colors.text : "#cdd6f4"
+        font.pixelSize: cfg.fontSmall
+        verticalAlignment: Text.AlignVCenter
+        background: Rectangle {
+            radius: 6
+            color: Qt.rgba(colors.surface0.r, colors.surface0.g, colors.surface0.b, 0.4)
+        }
+        onTextChanged: root.searchText = text
+    }
 
     // ── 空状态 ──
     Rectangle {
@@ -19,7 +39,10 @@ Item {
 
         Text {
             anchors.centerIn: parent
-            text: "📓 暂无日志\n今天还没有记录哦~"
+            text: {
+                if (searchText.trim()) return "🔍 没有匹配的结果";
+                return "📓 暂无日志\n今天还没有记录哦~";
+            }
             color: colors ? colors.overlay0 : "#6c7086"
             font.pixelSize: cfg.fontMedium
             horizontalAlignment: Text.AlignHCenter
@@ -38,9 +61,20 @@ Item {
 
     // ── 日志列表 ──
     ListView {
-        anchors.fill: parent
+        anchors.top: searchField.bottom
+        anchors.topMargin: 4
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
         visible: !loading
-        model: root.items
+        model: {
+            if (!searchText.trim()) return root.items;
+            var q = searchText.trim().toLowerCase();
+            return root.items.filter(function(item) {
+                return (item.content && item.content.toLowerCase().indexOf(q) >= 0)
+                    || (item.title && item.title.toLowerCase().indexOf(q) >= 0);
+            });
+        }
         clip: true
         spacing: 4
 

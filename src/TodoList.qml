@@ -9,15 +9,29 @@ Item {
 
     property var items: []
     property bool loading: false
-    property string filterStatus: "Pending"
+    property string filterStatus: cfg.todoFilter
     readonly property var colors: theme
+    property string searchText: ""
 
-    // 过滤后的列表
+    // 过滤后的列表（状态 + 搜索）
     readonly property var filteredItems: {
         var all = items || [];
-        return all.filter(function(item) {
+        var statusFiltered = all.filter(function(item) {
             return item.rawStatus === filterStatus;
         });
+        if (!searchText.trim()) return statusFiltered;
+        var q = searchText.trim().toLowerCase();
+        return statusFiltered.filter(function(item) {
+            return (item.title && item.title.toLowerCase().indexOf(q) >= 0)
+                || (item.description && item.description.toLowerCase().indexOf(q) >= 0);
+        });
+    }
+
+    onFilterStatusChanged: {
+        if (cfg.todoFilter !== filterStatus) {
+            cfg.todoFilter = filterStatus;
+            cfg.saveSettings();
+        }
     }
 
     // ── 过滤器栏 ──
@@ -67,9 +81,29 @@ Item {
         }
     }
 
+    // ── 搜索框 ──
+    TextField {
+        id: searchField
+        anchors.top: filterBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.topMargin: 4
+        height: 28
+        placeholderText: "🔍 搜索待办..."
+        placeholderTextColor: colors ? colors.overlay0 : "#6c7086"
+        color: colors ? colors.text : "#cdd6f4"
+        font.pixelSize: cfg.fontSmall
+        verticalAlignment: Text.AlignVCenter
+        background: Rectangle {
+            radius: 6
+            color: Qt.rgba(colors.surface0.r, colors.surface0.g, colors.surface0.b, 0.4)
+        }
+        onTextChanged: root.searchText = text
+    }
+
     // ── 空状态 ──
     Rectangle {
-        anchors.top: filterBar.bottom
+        anchors.top: searchField.bottom
         anchors.topMargin: 8
         anchors.left: parent.left
         anchors.right: parent.right
@@ -80,6 +114,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: {
+                if (searchText.trim()) return "🔍 没有匹配的结果";
                 if (items.length === 0) return "✨ 暂无待办\n一切都在掌控之中~";
                 if (filterStatus === "Pending") return "⬜ 没有待办任务";
                 if (filterStatus === "Done") return "✅ 没有已完成任务";
@@ -104,7 +139,7 @@ Item {
     // ── 待办列表 ──
     ListView {
         id: listView
-        anchors.top: filterBar.bottom
+        anchors.top: searchField.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
