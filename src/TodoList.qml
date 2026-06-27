@@ -186,7 +186,7 @@ Item {
                     font.pixelSize: cfg.fontMedium
                 }
 
-                // 标题 + 描述
+                // 标题 + 描述 + 标签
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 1
@@ -213,6 +213,12 @@ Item {
                         visible: modelData.description && modelData.description !== ""
                         opacity: modelData.status === "✅" ? 0.5 : 0.85
                     }
+
+                    // 标签
+                    TagList {
+                        tags: modelData.tags
+                        tagColor: colors ? colors.sapphire : "#74c7ec"
+                    }
                 }
 
                 // 截止日期
@@ -230,12 +236,6 @@ Item {
                         return colors ? colors.overlay0 : "#6c7086";
                     }
                     font.pixelSize: cfg.fontSmall
-                }
-
-                // 标签
-                TagList {
-                    tags: modelData.tags
-                    tagColor: colors ? colors.sapphire : "#74c7ec"
                 }
             }
 

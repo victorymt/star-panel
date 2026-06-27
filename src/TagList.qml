@@ -10,15 +10,16 @@ Flow {
     property color tagColor: "#74c7ec"
 
     visible: tags && tags.length > 0
-    spacing: 2
+    spacing: 4
     Layout.fillWidth: true
+    Layout.topMargin: visible ? 4 : 0
 
     Repeater {
         model: root.tags
         delegate: Rectangle {
             required property string modelData
-            height: 18
-            width: tagLabel.width + 8
+            height: 20
+            width: tagLabel.width + 10
             radius: 4
             color: Qt.rgba(root.tagColor.r, root.tagColor.g, root.tagColor.b, 0.15)
 
