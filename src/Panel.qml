@@ -20,14 +20,16 @@ PanelWindow {
     readonly property real panelWidth: cfg.panelWidth
     readonly property real panelMargin: cfg.panelMargin
 
-    // PanelWindow 在 WlrLayershell 模式下由 layershell 协议管理位置
-    implicitWidth: panelWidth + panelMargin * 2
+    // 窗口铺满屏幕宽度（透明背景，exclusionMode: Ignore 不占空间），
+    // 这样点击面板左侧空白区才能被 MouseArea 捕获 → 关闭面板。
+    implicitWidth: screen.width
     implicitHeight: screen.height
     color: "transparent"
 
     // PanelWindow.anchors 将窗口贴附到屏幕边缘（布尔值，非 Qt Item.anchors）
     anchors.top: true
     anchors.bottom: true
+    anchors.left: true
     anchors.right: true
 
     // ── 公开刷新接口（供子组件调用） ──
@@ -36,6 +38,34 @@ PanelWindow {
         else if (type === "idea") { dataFetcher.fetchIdeas(); }
         else if (type === "log")  { dataFetcher.fetchLogs(); }
         else                      { dataFetcher.reload(); }  // fallback: all
+    }
+
+    // ── 通用 toast 反馈（供子组件调用） ──
+    function showToast(msg) {
+        toastLabel.text = msg;
+        toast.show();
+    }
+
+    // ── 切换 tab（vim h/l 用） ──
+    function switchTab(delta) {
+        var len = tabBar.tabs.length;
+        tabBar.currentIndex = (tabBar.currentIndex + delta + len) % len;
+        focusCurrentList();
+    }
+
+    // ── 聚焦当前 tab 的列表（vim normal mode 入口） ──
+    function focusCurrentList() {
+        if (tabBar.currentIndex === 0) todoList.focusList();
+        else if (tabBar.currentIndex === 1) ideaList.focusList();
+        else logList.focusList();
+    }
+
+    // ── 删除项（vim dd 用） ──
+    function deleteItem(type, id) {
+        if (!id) { showToast("⚠️ 该项没有 id，无法删除"); return; }
+        deleteProc.pendingType = type;
+        deleteProc.command = ["starcatch", type, "delete", id];
+        deleteProc.running = true;
     }
 
     // ── 相对日期转换（供子组件调用） ──
@@ -97,8 +127,9 @@ PanelWindow {
     }
 
     // ── 显隐控制 ──
+    // slideOffset: 0 = 显示；panelWidth + panelMargin = 隐藏（backdrop 滑出屏幕右边）
     property bool panelVisible: false
-    property real slideOffset: -(panelWidth + panelMargin * 2)
+    property real slideOffset: panelWidth + panelMargin
     Behavior on slideOffset {
         NumberAnimation {
             duration: cfg.animationDuration
@@ -106,12 +137,14 @@ PanelWindow {
         }
     }
 
-    visible: panelVisible || slideOffset > -(panelWidth + panelMargin * 2)
+    visible: panelVisible || slideOffset < panelWidth + panelMargin
 
     onPanelVisibleChanged: {
-        slideOffset = panelVisible ? 0 : -(panelWidth + panelMargin * 2);
+        slideOffset = panelVisible ? 0 : (panelWidth + panelMargin);
         if (panelVisible) {
             autoRefreshTimer.start();
+            // 显示时立即刷新一次，避免长时间隐藏后看到过期数据
+            dataFetcher.reload();
         } else {
             autoRefreshTimer.stop();
         }
@@ -120,16 +153,14 @@ PanelWindow {
     // 宽度变化时更新隐藏位置，防止面板异常显示
     onPanelWidthChanged: {
         if (!panelVisible) {
-            slideOffset = -(panelWidth + panelMargin * 2);
+            slideOffset = panelWidth + panelMargin;
         }
     }
 
     Component.onCompleted: {
-        slideOffset = -(panelWidth + panelMargin * 2);
-        if (cfg.themeName !== "") {
-            theme.applyPreset(cfg.themeName);
-            theme.stopPolling();
-        }
+        slideOffset = panelWidth + panelMargin;
+        // 主题初始化由 Config.settingsLoader 完成后调用 theme.initFromSettings()，
+        // 避免启动时 matugen 色闪现后才套用预设。
         Qt.callLater(() => dataFetcher.reload());
     }
 
@@ -161,10 +192,10 @@ PanelWindow {
         }
     }
 
-    // ── 背景面板 ──
+    // ── 背景面板（靠右） ──
     Rectangle {
         id: backdrop
-        x: panelMargin + slideOffset
+        x: parent.width - panelWidth - panelMargin + slideOffset
         y: panelMargin
         width: panelWidth
         height: parent.height - panelMargin * 2
@@ -313,11 +344,18 @@ PanelWindow {
                 property var logs: []
                 property bool loading: false
                 property int pendingCount: 0
-                property string error: ""
+                // 三个独立 error 属性，避免并行 Process 互相覆盖；
+                // 聚合 error 只读属性供 UI 显示（优先 todo → idea → log）。
+                property string todoError: ""
+                property string ideaError: ""
+                property string logError: ""
+                readonly property string error: todoError || ideaError || logError
 
                 function reload() {
                     loading = true;
-                    error = "";
+                    todoError = "";
+                    ideaError = "";
+                    logError = "";
                     pendingCount = 3;
                     fetchTodos();
                     fetchIdeas();
@@ -343,8 +381,8 @@ PanelWindow {
                     running: false
                     stdout: StdioCollector {
                         onStreamFinished: {
-                            if (!this.text.trim()) dataFetcher.error = "待办数据为空，请确认 Starcatch 可用";
-                            else dataFetcher.error = "";
+                            if (!this.text.trim()) dataFetcher.todoError = "待办数据为空，请确认 Starcatch 可用";
+                            else dataFetcher.todoError = "";
                             dataFetcher.todos = dataFetcher.parseTodos(this.text);
                             dataFetcher.checkDone();
                         }
@@ -357,8 +395,8 @@ PanelWindow {
                     running: false
                     stdout: StdioCollector {
                         onStreamFinished: {
-                            if (!this.text.trim()) dataFetcher.error = "灵感数据为空，请确认 Starcatch 可用";
-                            else dataFetcher.error = "";
+                            if (!this.text.trim()) dataFetcher.ideaError = "灵感数据为空，请确认 Starcatch 可用";
+                            else dataFetcher.ideaError = "";
                             dataFetcher.ideas = dataFetcher.parseIdeas(this.text);
                             dataFetcher.checkDone();
                         }
@@ -371,8 +409,8 @@ PanelWindow {
                     running: false
                     stdout: StdioCollector {
                         onStreamFinished: {
-                            if (!this.text.trim()) dataFetcher.error = "日志数据为空，请确认 Starcatch 可用";
-                            else dataFetcher.error = "";
+                            if (!this.text.trim()) dataFetcher.logError = "日志数据为空，请确认 Starcatch 可用";
+                            else dataFetcher.logError = "";
                             dataFetcher.logs = dataFetcher.parseLogs(this.text);
                             dataFetcher.checkDone();
                         }
@@ -449,6 +487,7 @@ PanelWindow {
                         var time = formatDate(item.created_at);
                         var subtitle = item.source ? "from: " + item.source + " · " + time : time;
                         return {
+                            id: item.id,
                             title: item.title,
                             content: item.content || subtitle,
                             tags: item.tags || [],
@@ -464,6 +503,7 @@ PanelWindow {
                     return raw.map(function(item) {
                         var time = formatDate(item.created_at);
                         return {
+                            id: item.id,
                             title: time + (item.mood ? " · " + item.mood : ""),
                             content: item.content,
                             tags: item.tags || [],
@@ -517,9 +557,13 @@ PanelWindow {
     }
 
     // ── 快捷键 ──
+    // Escape：弹窗打开时让弹窗自己处理；快速输入聚焦时让输入框处理
+    // （vim: Esc 从 insert mode 返回 normal mode = 回到列表，不关面板）
     Shortcut {
         sequence: "Escape"
-        enabled: panelVisible
+        enabled: panelVisible && !settingsPanel.visible
+            && !todoList.detailPopup.visible && !ideaList.detailPopup.visible && !logList.detailPopup.visible
+            && !quickInput.inputActive
         onActivated: panelVisible = false
     }
 
@@ -539,9 +583,11 @@ PanelWindow {
     }
 
     // ── 搜索快捷 ──
+    // 注意：当任一列表搜索框聚焦时禁用，避免在搜索框里打 "/" 被全局拦截
     Shortcut {
         sequence: "/"
         enabled: panelVisible && !quickInput.inputActive
+            && !todoList.searchActive && !ideaList.searchActive && !logList.searchActive
         onActivated: {
             if (tabBar.currentIndex === 0) todoList.focusSearch();
             else if (tabBar.currentIndex === 1) ideaList.focusSearch();
@@ -551,6 +597,7 @@ PanelWindow {
     Shortcut {
         sequence: "Ctrl+F"
         enabled: panelVisible && !quickInput.inputActive
+            && !todoList.searchActive && !ideaList.searchActive && !logList.searchActive
         onActivated: {
             if (tabBar.currentIndex === 0) todoList.focusSearch();
             else if (tabBar.currentIndex === 1) ideaList.focusSearch();
@@ -565,7 +612,7 @@ PanelWindow {
         onActivated: dataFetcher.reload()
     }
     Shortcut {
-        sequence: "Ctrl+S"
+        sequence: "Ctrl+,"
         enabled: panelVisible
         onActivated: settingsPanel.visible ? settingsPanel.close() : settingsPanel.open()
     }
@@ -573,5 +620,70 @@ PanelWindow {
         sequence: "Ctrl+Q"
         enabled: panelVisible
         onActivated: panelVisible = false
+    }
+
+    // ── vim/emacs: Ctrl+G 关闭面板（同 Ctrl+Q，弹窗时让弹窗处理） ──
+    Shortcut {
+        sequence: "Ctrl+G"
+        enabled: panelVisible && !settingsPanel.visible
+            && !todoList.detailPopup.visible && !ideaList.detailPopup.visible && !logList.detailPopup.visible
+        onActivated: panelVisible = false
+    }
+
+    // ── 删除项 Process（vim dd 触发） ──
+    Process {
+        id: deleteProc
+        running: false
+        property string pendingType: ""
+        stdout: StdioCollector {}
+        stderr: StdioCollector { id: deleteStderr }
+        onExited: function(exitCode, exitStatus) {
+            if (exitCode !== 0) {
+                var detail = deleteStderr.text.trim();
+                showToast("❌ 删除失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
+            } else {
+                showToast("🗑️  已删除");
+            }
+            var t = pendingType;
+            pendingType = "";
+            if (t) reloadData(t);
+        }
+    }
+
+    // ── Toast 反馈层 ──
+    Popup {
+        id: toast
+        parent: panel.contentItem
+        x: (panel.contentItem.width - width) / 2
+        y: panel.contentItem.height - height - 24
+        width: Math.min(toastLabel.implicitWidth + 32, panel.contentItem.width - 32)
+        height: toastLabel.implicitHeight + 20
+        modal: false
+        focus: false
+        closePolicy: Popup.NoAutoClose
+        padding: 10
+        background: Rectangle {
+            radius: 8
+            color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.92)
+            border.color: Qt.rgba(theme.red.r, theme.red.g, theme.red.b, 0.4)
+            border.width: 1
+        }
+        contentItem: Text {
+            id: toastLabel
+            color: theme.text
+            font.pixelSize: cfg.fontSmall
+            wrapMode: Text.WordWrap
+            horizontalAlignment: Text.AlignHCenter
+        }
+        function show() {
+            toastTimer.restart();
+            open();
+        }
+        Timer {
+            id: toastTimer
+            interval: 2500
+            repeat: false
+            onTriggered: toast.close()
+        }
     }
 }

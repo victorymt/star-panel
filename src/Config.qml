@@ -66,6 +66,8 @@ Item {
                     if (typeof data.themeName  === "string") config.themeName  = data.themeName;
                     if (typeof data.todoFilter === "string") config.todoFilter = data.todoFilter;
                 } catch (e) {}
+                // 设置加载完成后统一初始化主题，避免与 Colors.qml 的 matugen 读取竞态
+                if (typeof theme !== "undefined") theme.initFromSettings();
             }
         }
     }

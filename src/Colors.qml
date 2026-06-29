@@ -99,6 +99,18 @@ Item {
         themePoller.start();
     }
 
+    // ── 启动时统一入口：由 Config.settingsLoader 完成后调用 ──
+    // 避免启动时 themeReader/themePoller 与 settingsLoader 竞态导致 matugen 闪现。
+    function initFromSettings() {
+        if (typeof cfg !== "undefined" && cfg.themeName !== "") {
+            applyPreset(cfg.themeName);
+            stopPolling();
+        } else {
+            reloadMatugen();
+            startPolling();
+        }
+    }
+
     readonly property string homeDir: Quickshell.env("HOME") || ""
 
     Process {
@@ -107,7 +119,7 @@ Item {
             "cat " + homeDir + "/.config/star-panel/theme.json 2>/dev/null" +
             " || cat " + homeDir + "/.config/hypr/scripts/quickshell/qs_colors.json 2>/dev/null" +
             " || echo '{}'"]
-        running: true
+        running: false  // 由 initFromSettings() 触发，避免启动竞态
         stdout: StdioCollector {
             onStreamFinished: {
                 if (typeof cfg !== "undefined" && cfg.themeName !== "") return;
@@ -143,9 +155,9 @@ Item {
     Timer {
         id: themePoller
         interval: 3000
-        running: true
+        running: false  // 由 initFromSettings() 触发
         repeat: true
-        triggeredOnStart: true
+        triggeredOnStart: false
         onTriggered: {
             if (typeof cfg === "undefined" || cfg.themeName === "") {
                 themeReader.running = true;

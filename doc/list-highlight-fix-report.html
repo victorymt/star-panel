@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Starcatch star-panel 列表高亮修复 — 完整分析报告</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px; background: #1e1e2e; color: #cdd6f4; line-height: 1.6; }
+  h1 { color: #89b4fa; border-bottom: 2px solid #45475a; padding-bottom: 8px; }
+  h2 { color: #a6e3a1; margin-top: 32px; }
+  h3 { color: #fab387; }
+  code { background: #313244; padding: 2px 6px; border-radius: 4px; font-family: "JetBrains Mono", "Fira Code", monospace; font-size: 0.9em; }
+  pre { background: #181825; padding: 12px 16px; border-radius: 8px; overflow-x: auto; border-left: 3px solid #89b4fa; }
+  pre code { background: none; padding: 0; }
+  .wrong { border-left-color: #f38ba8; }
+  .right { border-left-color: #a6e3a1; }
+  .timeline { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+  .event { display: flex; gap: 12px; align-items: flex-start; }
+  .time { color: #6c7086; font-family: monospace; min-width: 80px; font-size: 0.85em; padding-top: 2px; }
+  .desc { flex: 1; }
+  .tag { display: inline-block; font-size: 0.75em; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+  .tag-wrong { background: #f38ba8; color: #1e1e2e; }
+  .tag-mis { background: #fab387; color: #1e1e2e; }
+  .tag-right { background: #a6e3a1; color: #1e1e2e; }
+  .tag-root { background: #89b4fa; color: #1e1e2e; }
+  blockquote { border-left: 3px solid #45475a; margin: 16px 0; padding: 8px 16px; color: #bac2de; background: #181825; border-radius: 0 8px 8px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+  th, td { border: 1px solid #45475a; padding: 8px 12px; text-align: left; }
+  th { background: #313244; color: #cdd6f4; }
+  .highlight-box { background: #1e1e2e; border: 1px solid #89b4fa; border-radius: 8px; padding: 16px; margin: 16px 0; }
+  .highlight-box h4 { margin: 0 0 8px 0; color: #89b4fa; }
+  .files { background: #181825; padding: 12px 16px; border-radius: 8px; margin: 16px 0; }
+  .files li { margin: 4px 0; }
+</style>
+</head>
+<body>
+
+<h1>🗺️ star-panel 列表高亮修复报告</h1>
+
+<p><strong>项目：</strong> Starcatch star-panel（Quickshell QML 负一屏组件）<br>
+<strong>现象：</strong> vim/emacs 键盘绑定已就绪（j/k/gg/G/h/l/o/dd），但上下移动时没有视觉高亮反馈，用户不知道当前导航到哪一项。</p>
+
+<hr>
+
+<h2>📅 时间线</h2>
+
+<div class="timeline">
+
+<div class="event">
+  <span class="time">第 1 轮</span>
+  <div class="desc">
+    <strong>增加 vim/emacs 绑定（j/k/h/l/o/gg/G/dd/Ctrl+N/P/A/E）</strong><br>
+    绑定后测试发现 <code>ListView.isCurrentItem</code> 没有生效，高亮不可见。认为是对比度不够。
+  </div>
+</div>
+
+<div class="event">
+  <span class="time">第 2 轮</span>
+  <div class="desc">
+    <strong>强化视觉参数（</strong><span class="tag tag-wrong">弯路 1</span><strong>）</strong><br>
+    修改 <code>background</code> 颜色从 <code>surface1 0.4 alpha</code> → <code>surface2 0.5</code>，
+    增加 2px 蓝色边框，添加 ▸ 指示符。<br>
+    <strong>结果：</strong>还是看不见。误以为颜色仍然不够深，继续调参。
+  </div>
+</div>
+
+<div class="event">
+  <span class="time">第 2.5 轮</span>
+  <div class="desc">
+    <strong>改 <code>currentIndex</code> 初始值（</strong><span class="tag tag-wrong">弯路 2</span><strong>）</strong><br>
+    把 <code>currentIndex: -1</code> 改成 <code>0</code>，认为首项不高亮是因为初始索引为 -1。<br>
+    <strong>结果：</strong>仍然看不到任何高亮。<br>
+    <em>误解：绑定本身是好的，只是初始值不对。</em>
+  </div>
+</div>
+
+<div class="event">
+  <span class="time">第 3 轮</span>
+  <div class="desc">
+    <strong>用 explore agent 深入调研（</strong><span class="tag tag-root">根因</span><strong>）</strong><br>
+    <code>ListView.isCurrentItem</code> 是 attached property，在 delegate 内嵌套子项
+    （如 <code>background: Rectangle</code>）中引用时，作用域是 <strong>Rectangle 自身</strong>
+    而非 delegate root，永远拿不到 true。<br>
+    再次阅读 Qt 自带 5 个 ItemDelegate 样式（Basic、Fusion、Material、Universal、FluentWinUI3），
+    确认它们全部用 <code>control.highlighted</code> 而非 <code>ListView.isCurrentItem</code>。
+  </div>
+</div>
+
+<div class="event">
+  <span class="time">第 4 轮</span>
+  <div class="desc">
+    <strong>最终修复（</strong><span class="tag tag-right">正确</span><strong>）</strong><br>
+    delegate root 绑定 <code>highlighted: ListView.isCurrentItem</code>，
+    <code>background</code> 和 <code>contentItem</code> 中通过 <code>itemDel.highlighted</code>
+    引用。三层视觉标识立即可见。
+  </div>
+</div>
+
+</div>
+
+<hr>
+
+<h2>🧭 阶段一（弯路）：误判为对比度问题</h2>
+
+<h3>❌ 错误诊断</h3>
+<p>
+分析 <code>TodoList.qml</code> 中 delegate 的 <code>background</code> 代码，发现背景色是
+<code>surface1</code> 0.4 alpha。认为看不清楚是因为颜色太浅：
+</p>
+
+<pre class="wrong"><code>// ❌ 弯路：调颜色参数
+background: Rectangle {
+    color: ListView.isCurrentItem                              // ← 永远 false！
+        ? Qt.rgba(colors.surface2.r, colors.surface2.g, colors.surface2.b, 0.5)
+        : "transparent"
+    border.width: ListView.isCurrentItem ? 2 : 0              // ← 永远 0
+    border.color: colors.blue
+}</code></pre>
+
+<blockquote>
+<strong>误解 1：</strong>以为 <code>ListView.isCurrentItem</code> 在任何层级都能正确解析为 true。
+<strong>误解 2：</strong>以为问题只是颜色不够深、缺少边框和指示符、或者初始 currentIndex 是 -1。
+这三个"修复"全都建立在错误的前提上（绑定能拿到 true），所以全部无效。
+</blockquote>
+
+<h3>❌ 同时做的"修复"</h3>
+<ul>
+  <li><code>currentIndex: -1</code> → <code>0</code>（首项初始不高亮？）</li>
+  <li>添加 <code>▸</code> 指示符 Text，<code>visible: ListView.isCurrentItem</code> → 永远 hidden</li>
+  <li>添加 <code>border</code>，宽度 2，蓝色 —— 绑定读不到 true，边框为 0</li>
+</ul>
+
+<p><strong>效果：</strong><br>
+所有键盘绑定都能正确移动 <code>currentIndex</code>（用 <code>print()</code> 印证），
+但视觉上完全看不出来 —— 画布上没有任何一个像素随 currentIndex 变化而变化。</p>
+
+<hr>
+
+<h2>🔬 阶段二（根因）：QML attached property 作用域</h2>
+
+<h3>根本原因</h3>
+
+<p>
+<code>ListView.isCurrentItem</code> 是 <strong>attached property</strong>（附加属性）。
+在 QML 中，attached property 的作用域绑定到<strong>声明该属性的对象自身</strong>。
+</p>
+
+<p>当 delegate 结构是：</p>
+
+<pre class="wrong"><code>ItemDelegate {                          // ← ListView.isCurrentItem 附加到这里
+    contentItem: RowLayout {
+        // ... ListView.isCurrentItem 引用 RowLayout 自己（没有该属性）→ false
+    }
+
+    background: Rectangle {            // ← ListView.isCurrentItem 引用 Rectangle 自己
+        color: ListView.isCurrentItem   //    （没有该属性）→ 永远 false
+            ? someColor : "transparent"
+    }
+}</code></pre>
+
+<p>
+<code>background</code> 内部的 <code>ListView.isCurrentItem</code> 解析的是
+<strong>Rectangle 实例</strong> 而非 <code>ItemDelegate</code> 实例。
+Rectangle 上没有 <code>isCurrentItem</code> 这个 attached property，所以永远返回 false。
+</p>
+
+<div class="highlight-box">
+<h4>💡 关键发现</h4>
+<p>
+Qt 内置的 5 个 ItemDelegate 样式（Basic、Fusion、Material、Universal、FluentWinUI3）
+<strong>没有一个</strong>在 background 或 contentItem 里直接使用 <code>ListView.isCurrentItem</code>。
+它们全部在 delegate root 绑定 <code>highlighted: ListView.isCurrentItem</code>，
+然后子项引用 <code>control.highlighted</code>（普通属性）。
+</p>
+<p>
+这是 Qt 框架自己的最佳实践 —— 我们的代码在犯一个 Qt 文档有明确示例避免的错误。
+</p>
+</div>
+
+<hr>
+
+<h2>✅ 阶段三（最终修复）：三层视觉 + 正确绑定</h2>
+
+<h3>修复方案</h3>
+
+<p>核心改动：把 <code>ListView.isCurrentItem</code> 的解析提升到 delegate root，子项通过 root 的 id 引用普通属性。</p>
+
+<pre class="right"><code>// ✅ 正确写法
+delegate: ItemDelegate {
+    id: itemDel
+    highlighted: ListView.isCurrentItem     // ← 在 root 正确解析 attached property
+
+    contentItem: RowLayout {
+        Text {
+            text: "▸"
+            visible: itemDel.highlighted    // ← 通过 id 引用普通属性
+        }
+    }
+
+    background: Rectangle {
+        color: itemDel.highlighted          // ← 通过 id 引用普通属性
+            ? Qt.rgba(colors.surface2.r, colors.surface2.g, colors.surface2.b, 0.5)
+            : hovered
+                ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.3)
+                : "transparent"
+        border.width: itemDel.highlighted ? 2 : 0
+        border.color: Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.8)
+    }
+
+    onClicked: {
+        detailPopup.type = "todo";
+        detailPopup.itemData = modelData;
+        detailPopup.open();
+    }
+}</code></pre>
+
+<h3>三层视觉标识（同时生效）</h3>
+
+<table>
+  <tr><th>层级</th><th>效果</th><th>代码</th></tr>
+  <tr>
+    <td>▸ 指示符</td>
+    <td>行首蓝色 ▸，vim 风格</td>
+    <td><code>Text { text: "▸"; visible: itemDel.highlighted }</code></td>
+  </tr>
+  <tr>
+    <td>底色</td>
+    <td><code>surface2</code> 0.5 alpha 半透明底色</td>
+    <td><code>color: itemDel.highlighted ? rgba(surface2, 0.5) : ...</code></td>
+  </tr>
+  <tr>
+    <td>边框</td>
+    <td>2px 蓝色圆角边框</td>
+    <td><code>border.width: itemDel.highlighted ? 2 : 0; border.color: blue 0.8</code></td>
+  </tr>
+</table>
+
+<h3>修复前后的对比</h3>
+
+<table>
+  <tr><th>维度</th><th>修复前</th><th>修复后</th></tr>
+  <tr><td><code>ListView.isCurrentItem</code> 绑定位置</td><td>background/contentItem 内部</td><td>delegate root → <code>highlighted</code></td></tr>
+  <tr><td>子项引用方式</td><td>直接 <code>ListView.isCurrentItem</code></td><td><code>itemDel.highlighted</code></td></tr>
+  <tr><td>background 颜色</td><td><code>surface1</code> 0.4（永远不显示）</td><td><code>surface2</code> 0.5 + hover 0.3</td></tr>
+  <tr><td>边框</td><td>无</td><td>2px 蓝色</td></tr>
+  <tr><td>指示符</td><td>无</td><td>▸ 行首</td></tr>
+  <tr><td><code>currentIndex</code> 初始值</td><td>-1</td><td>0</td></tr>
+  <tr><td>model 重建时</td><td>滚动回顶部</td><td>保留 contentY + <code>currentIndex = 0</code></td></tr>
+</table>
+
+<hr>
+
+<h2>📂 涉及文件</h2>
+
+<div class="files">
+<ul>
+  <li><code>src/Panel.qml</code> — 新增 <code>switchTab()</code>、<code>focusCurrentList()</code>、<code>deleteItem()</code>、delete Proc、showToast、Ctrl+, 绑定、Ctrl+G 绑定、Escape 路由</li>
+  <li><code>src/TodoList.qml</code> — vim/emacs 键盘绑定（j/k/h/l/o/gg/G/dd/Ctrl+N/P/A/E）、<code>itemDel.highlighted</code> 高亮机制、<code>currentIndex: 0</code>、<code>onModelChanged</code> 保留 contentY</li>
+  <li><code>src/IdeaList.qml</code> — 同上（idea 类型）</li>
+  <li><code>src/LogList.qml</code> — 同上（log 类型）</li>
+  <li><code>src/QuickInput.qml</code> — <code>focusInput()</code>、Esc → 返回列表、Ctrl+A/E 行首行尾</li>
+  <li><code>src/DetailPopup.qml</code> — <code>Process.onExited</code> 防 stale data race</li>
+  <li><code>src/SettingsPanel.qml</code> — ScrollView 包裹 + implicitHeight 上限</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>🧠 教训总结</h2>
+
+<ol>
+  <li>
+    <strong>先验证绑定值是否正确，再调样式参数。</strong>
+    <br>在 <code>background</code> 里 <code>print(ListView.isCurrentItem)</code> 能立即暴露问题 ——
+    但它 <strong>永远输出 false</strong>。如果第 2 轮就验证这一点，可以跳过弯路直接到第 4 轮。
+  </li>
+  <li>
+    <strong>QML attached property 有严格作用域。</strong>
+    <br><code>ListView.isCurrentItem</code>、<code>GridLayout.isRow</code> 等附加属性只附加到声明的父组件，
+    子组件拿不到。必须在 root 读一次 <code>highlighted: ListView.isCurrentItem</code>，
+    子组件通过 <code>rootId.highlighted</code> 引用。
+  </li>
+  <li>
+    <strong>ItemDelegate 内置了 <code>highlighted</code> 属性。</strong>
+    <br>这是 Qt 官方和所有内置样式推荐的高亮绑定方式。直接使用 <code>highlighted: ListView.isCurrentItem</code>
+    然后引用 <code>itemDel.highlighted</code> 符合框架设计，避免了 attached property 的作用域问题。
+  </li>
+  <li>
+    <strong>不要在一个错误假设上调参三次。</strong>
+    <br>颜色从 surface1 0.4 → surface2 0.5、加 border、加 ▸、改 currentIndex ——
+    这四个改动全部基于 "绑定已经能读到 true" 的错误前提。任何一次停下来验证
+    <code>print()</code> 输出都能省下两轮弯路。
+  </li>
+</ol>
+
+<hr>
+
+<h2>✅ 验证结果</h2>
+
+<ul>
+  <li>j/k 上下移动 → ▸ 指示符 + 蓝色边框 + surface2 底色同步跟随</li>
+  <li>gg 跳顶 → 高亮回到第 0 项</li>
+  <li>G 跳底 → 高亮跳到最后一项</li>
+  <li>过滤器切换 / 搜索 / 30s 自动刷新 → <code>onModelChanged</code> 重置 currentIndex 为 0</li>
+  <li>h/l 切换 tab → 对应列表保持高亮状态</li>
+  <li>dd 删除 → 列表更新后高亮正常</li>
+  <li>所有改动通过 <code>quickshell -p</code> 加载 + <code>restart.sh</code> 重启验证</li>
+</ul>
+
+<p style="text-align:center; color:#6c7086; margin-top:48px;">
+报告生成时间：2026-06-29 · 基于 star-panel commit <code>7b39c51</code> + 未提交修正
+</p>
+
+</body>
+</html>

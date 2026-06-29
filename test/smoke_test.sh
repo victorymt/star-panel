@@ -29,7 +29,7 @@ assert_eq "$(echo "$PID" | wc -l)" "1" "进程存在且唯一"
 echo "=== 2. IPC 通信测试 ==="
 sleep 1
 
-IPC_SOCK=$(find /run/user/1000/quickshell/by-id -name "ipc.sock" 2>/dev/null | head -1)
+IPC_SOCK=$(find /run/user/$(id -u)/quickshell/by-id -name "ipc.sock" 2>/dev/null | head -1)
 if [ -n "$IPC_SOCK" ]; then
   pass "IPC socket 存在: $IPC_SOCK"
 else
@@ -63,8 +63,20 @@ else
   pass "qmllint 未安装，跳过"
 fi
 
-# ── 5. 清理 ──
-echo "=== 5. 清理 ==="
+# ── 5. JS 解析器单元测试 ──
+echo "=== 5. JS 解析器单元测试 ==="
+if command -v node &>/dev/null; then
+  if node test/parsers.test.js 2>&1; then
+    pass "parsers.test.js 通过"
+  else
+    fail "parsers.test.js 失败"
+  fi
+else
+  pass "node 未安装，跳过解析器测试"
+fi
+
+# ── 6. 清理 ──
+echo "=== 6. 清理 ==="
 pkill -f "quickshell.*star-panel" 2>/dev/null || true
 
 # ── 结果 ──

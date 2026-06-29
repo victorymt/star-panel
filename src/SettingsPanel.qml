@@ -11,7 +11,9 @@ Popup {
     dim: true
 
     implicitWidth: 300
-    implicitHeight: settingsColumn.implicitHeight + padding * 2
+    // 限制最大高度，短屏上"恢复默认/状态栏"按钮仍可达；超出部分用 ScrollView 滚动
+    implicitHeight: Math.min(settingsColumn.implicitHeight + padding * 2,
+                             parent ? parent.height * 0.8 : 600)
     padding: 16
 
     x: (parent.width - width) / 2
@@ -24,9 +26,15 @@ Popup {
         border.color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
     }
 
-    contentItem: ColumnLayout {
-        id: settingsColumn
-        spacing: 8
+    contentItem: ScrollView {
+        id: settingsScroll
+        contentWidth: availableWidth
+        clip: true
+
+        ColumnLayout {
+            id: settingsColumn
+            spacing: 8
+            width: settingsScroll.availableWidth
 
         // 标题
         Text {
@@ -455,5 +463,6 @@ Popup {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
         }
-    }
+        }  // ColumnLayout
+    }  // ScrollView (contentItem)
 }

@@ -13,8 +13,19 @@ Item {
     readonly property var colors: theme
     property string searchText: ""
     property bool searchActive: searchField.activeFocus
+    readonly property string itemType: "todo"
+
+    // vim gg/dd 状态机
+    property bool _pendingG: false
+    property bool _pendingD: false
 
     function focusSearch() { searchField.forceActiveFocus(); }
+    function focusList() { listView.forceActiveFocus(); }
+
+    // gg 第二次 g 的超时（500ms 内按第二次 g 才算 gg）
+    Timer { id: gReset; interval: 500; onTriggered: root._pendingG = false }
+    // dd 第二次 d 的超时（1.5s 内按第二次 d 才算 dd）
+    Timer { id: dReset; interval: 1500; onTriggered: root._pendingD = false }
 
     // 过滤后的列表（状态 + 搜索）
     readonly property var filteredItems: {
@@ -34,6 +45,17 @@ Item {
         if (cfg.todoFilter !== filterStatus) {
             cfg.todoFilter = filterStatus;
             cfg.saveSettings();
+        }
+    }
+
+    // 外部（如设置面板"恢复默认"）修改 cfg.todoFilter 时，推回本地 filterStatus，
+    // 否则一旦用户点过过滤芯片，本地赋值会断开初始绑定，UI 就不再跟随。
+    Connections {
+        target: cfg
+        function onTodoFilterChanged() {
+            if (root.filterStatus !== cfg.todoFilter) {
+                root.filterStatus = cfg.todoFilter;
+            }
         }
     }
 
@@ -122,6 +144,14 @@ Item {
                         listView.forceActiveFocus();
                     }
                     event.accepted = true;
+                } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_A) {
+                    // emacs Ctrl+A — 行首
+                    searchField.cursorPosition = 0;
+                    event.accepted = true;
+                } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_E) {
+                    // emacs Ctrl+E — 行尾
+                    searchField.cursorPosition = searchField.text.length;
+                    event.accepted = true;
                 }
             }
 
@@ -190,20 +220,80 @@ Item {
         clip: true
         spacing: 4
         focus: true
-        currentIndex: -1
-        onModelChanged: currentIndex = -1
+        currentIndex: 0
+        // 保留滚动位置：model 替换（30s 刷新 / 搜索）时回到原 contentY，
+        // 避免列表跳回顶部打断阅读。
+        onModelChanged: {
+            var savedY = contentY;
+            currentIndex = 0;
+            Qt.callLater(function() {
+                if (savedY <= contentHeight - height + spacing)
+                    contentY = savedY;
+                else
+                    contentY = Math.max(0, contentHeight - height);
+            });
+        }
 
         KeyNavigation.tab: searchField
         KeyNavigation.backtab: searchField
 
         Keys.onPressed: function(event) {
-            if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+            if (event.key === Qt.Key_J || event.key === Qt.Key_Down
+                || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_N)) {
+                // j / ↓ / Ctrl+N — 下移
                 if (currentIndex < model.length - 1) currentIndex++;
                 positionViewAtIndex(currentIndex, ListView.Contain);
                 event.accepted = true;
-            } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+            } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up
+                       || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_P)) {
+                // k / ↑ / Ctrl+P — 上移
                 if (currentIndex > 0) currentIndex--;
                 positionViewAtIndex(currentIndex, ListView.Contain);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_G && !(event.modifiers & Qt.ShiftModifier)) {
+                // gg — 跳到顶部（500ms 内按两次 g）
+                if (root._pendingG) {
+                    currentIndex = 0;
+                    positionViewAtIndex(0, ListView.Beginning);
+                    root._pendingG = false;
+                    gReset.stop();
+                } else {
+                    root._pendingG = true;
+                    gReset.restart();
+                }
+                event.accepted = true;
+            } else if (event.key === Qt.Key_G && (event.modifiers & Qt.ShiftModifier)) {
+                // G — 跳到底部
+                if (model.length > 0) {
+                    currentIndex = model.length - 1;
+                    positionViewAtIndex(currentIndex, ListView.End);
+                }
+                event.accepted = true;
+            } else if (event.key === Qt.Key_H && !event.modifiers) {
+                // h — 上一个 tab
+                panel.switchTab(-1);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_L && !event.modifiers) {
+                // l — 下一个 tab
+                panel.switchTab(1);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_O && !event.modifiers) {
+                // o — 聚焦快速输入（"open new line" → insert mode）
+                quickInput.focusInput();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_D && !event.modifiers) {
+                // dd — 删除当前项（1.5s 内按两次 d 确认）
+                if (root._pendingD) {
+                    root._pendingD = false;
+                    dReset.stop();
+                    if (currentIndex >= 0 && currentIndex < model.length && model[currentIndex].id) {
+                        panel.deleteItem(root.itemType, model[currentIndex].id);
+                    }
+                } else {
+                    root._pendingD = true;
+                    dReset.restart();
+                    panel.showToast("再按 d 确认删除");
+                }
                 event.accepted = true;
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 if (currentIndex >= 0 && currentIndex < model.length) {
@@ -221,15 +311,29 @@ Item {
         }
 
         delegate: ItemDelegate {
+            id: itemDel
             required property var modelData
             required property int index
 
             width: ListView.view.width
             implicitHeight: Math.max(48, contentRow.implicitHeight + 16)
+            highlighted: ListView.isCurrentItem
 
             contentItem: RowLayout {
                 id: contentRow
                 spacing: 8
+
+                // vim 风格当前行指示符 ▸
+                Text {
+                    text: "▸"
+                    color: colors ? colors.blue : "#89b4fa"
+                    font.pixelSize: cfg.fontMedium
+                    font.bold: true
+                    visible: itemDel.highlighted
+                    Layout.preferredWidth: 14
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
 
                 // 优先级指示器
                 Rectangle {
@@ -298,11 +402,13 @@ Item {
 
             background: Rectangle {
                 radius: 8
-                color: ListView.isCurrentItem
-                    ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.4)
+                color: itemDel.highlighted
+                    ? Qt.rgba(colors.surface2.r, colors.surface2.g, colors.surface2.b, 0.5)
                     : hovered
                         ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.3)
                         : "transparent"
+                border.width: itemDel.highlighted ? 2 : 0
+                border.color: Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.8)
             }
 
             onClicked: {

@@ -2,12 +2,14 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 
 Popup {
     id: root
 
     property string type: "todo"
     property var itemData: ({})
+    property string pendingReload: ""  // type to reload after action succeeds
 
     modal: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -233,10 +235,8 @@ Popup {
                         : "transparent"
                 }
                 onClicked: {
-                    if (!itemData.id) return;
-                    Quickshell.execDetached(["starcatch", "todo", actionBtn.actions.cmd, itemData.id]);
-                    root.close();
-                    Qt.callLater(function() { panel.reloadData("todo"); });
+                    if (!itemData.id || !actionBtn.actions.cmd) return;
+                    root.runAction(actionBtn.actions.cmd, "todo");
                 }
             }
 
@@ -261,9 +261,7 @@ Popup {
                 }
                 onClicked: {
                     if (!itemData.id) return;
-                    Quickshell.execDetached(["starcatch", "todo", "archive", itemData.id]);
-                    root.close();
-                    Qt.callLater(function() { panel.reloadData("todo"); });
+                    root.runAction("archive", "todo");
                 }
             }
 
@@ -306,5 +304,34 @@ Popup {
             }
             onClicked: root.close()
         }
+    }
+
+    // ── 动作执行 Process ──
+    // 用 Process 替代 execDetached，确保写入完成后才刷新列表，
+    // 失败时通过 panel 的 toast 给用户反馈。
+    Process {
+        id: actionProc
+        running: false
+        stdout: StdioCollector {}
+        stderr: StdioCollector {
+            id: actionStderr
+        }
+        onExited: function(exitCode, exitStatus) {
+            if (exitCode !== 0) {
+                var detail = actionStderr.text.trim();
+                panel.showToast("❌ 操作失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
+            }
+            var t = root.pendingReload;
+            root.pendingReload = "";
+            root.close();
+            if (t) panel.reloadData(t);
+        }
+    }
+
+    function runAction(cmd, reloadType) {
+        if (!itemData.id) return;
+        pendingReload = reloadType;
+        actionProc.command = ["starcatch", "todo", cmd, itemData.id];
+        actionProc.running = true;
     }
 }

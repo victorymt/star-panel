@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 
 /// QuickInput — 底部快速输入组件
 /// Pipe 模式快速捕获灵感、待办、日志到 Starcatch
@@ -13,6 +14,9 @@ Item {
     property alias inputActive: textInput.activeFocus
     property bool cmdMode: false
     property bool helpVisible: false
+
+    // 供列表的 vim `o` 调用：聚焦输入框（进入 insert mode）
+    function focusInput() { textInput.forceActiveFocus(); }
 
     Timer {
         id: helpTimer
@@ -184,7 +188,7 @@ Item {
                     }
                 }
 
-                // Tab 切换类型 / 切换命令候选
+                // Tab 切换类型 / 切换命令候选；vim/emacs 文本编辑绑定
                 Keys.onPressed: function(event) {
                     if (event.key === Qt.Key_Tab) {
                         event.accepted = true;
@@ -202,6 +206,19 @@ Item {
                     } else if (event.key === Qt.Key_Escape && root.cmdMode) {
                         textInput.text = "";
                         root.cmdMode = false;
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Escape && !root.cmdMode) {
+                        // vim: Esc 从 insert mode 返回 normal mode（列表）
+                        textInput.text = "";
+                        panel.focusCurrentList();
+                        event.accepted = true;
+                    } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_A) {
+                        // emacs Ctrl+A — 行首
+                        textInput.cursorPosition = 0;
+                        event.accepted = true;
+                    } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_E) {
+                        // emacs Ctrl+E — 行尾
+                        textInput.cursorPosition = textInput.text.length;
                         event.accepted = true;
                     }
                 }
@@ -243,17 +260,12 @@ Item {
                     var type = typeSelector.typeModels[typeSelector.currentIndex].type;
                     var safeText = "'" + inputText.replace(/'/g, "'\\''") + "'";
 
-                    Quickshell.execDetached([
-                        "bash", "-c",
-                        "printf '%s\\n' " + safeText + " | starcatch pipe " + type
-                    ]);
+                    pipeProc.pendingType = type;
+                    pipeProc.command = ["bash", "-c", "printf '%s\\n' " + safeText + " | starcatch pipe " + type];
+                    pipeProc.running = true;
 
                     textInput.text = "";
-                    textInput.focus = false;
-
-                    // 延迟刷新列表，等 starcatch pipe 写入完成
-                    refreshTimer.pendingType = type;
-                    refreshTimer.start();
+                    textInput.forceActiveFocus();
                 }
             }
 
@@ -287,13 +299,24 @@ Item {
             }
         }
 
-        // 延迟刷新：等 starcatch pipe 写入完成后刷新面板数据
-        Timer {
-            id: refreshTimer
-            interval: 400
-            repeat: false
+        // pipe 写入 Process：写入完成后再刷新对应列表，避免读到写入前的旧数据；
+        // 失败时通过 panel 的 toast 给用户反馈。
+        Process {
+            id: pipeProc
+            running: false
             property string pendingType: ""
-            onTriggered: panel.reloadData(pendingType)
+            stdout: StdioCollector {}
+            stderr: StdioCollector { id: pipeStderr }
+            onExited: function(exitCode, exitStatus) {
+                if (exitCode !== 0) {
+                    var detail = pipeStderr.text.trim();
+                    panel.showToast("❌ 捕获失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
+                }
+                if (pendingType) {
+                    panel.reloadData(pendingType);
+                    pendingType = "";
+                }
+            }
         }
     }
 }

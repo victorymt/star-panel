@@ -29,13 +29,13 @@
 | QS 配置名 | `star-panel` |
 | 技术栈 | QML + Qt6 + Quickshell + WlrLayershell |
 | 后端 | Starcatch CLI (Rust) |
-| 窗口类型 | `PanelWindow` + `WlrLayershell.Overlay` |
+| 窗口类型 | `PanelWindow` + `WlrLayer.Top` |
 | 定位 | 右侧全高浮动（`Top \| Bottom \| Right` anchored） |
 
 ### 设计理念
 
 ```
-轻按 Win+N → 右侧滑出 → 一目了然 → 快速捕获 → 滑走关闭
+轻按 Super+I → 右侧滑出 → 一目了然 → 快速捕获 → 滑走关闭
      ↑                              ↓
     Starcatch DB ←─── CLI Pipe ─────┘
 ```
@@ -46,7 +46,7 @@
 
 ```
 ShellRoot (shell.qml)
- └── PanelWindow (Panel.qml)  ←── WlrLayershell 覆盖层
+ └── PanelWindow (Panel.qml)  ←── WlrLayer.Top 覆盖层
       ├── Colors (Colors.qml)  ←── Matugen 主题色
       ├── IpcHandler           ←── IPC 控制 (toggle/show/hide)
       ├── Rectangle (背景面板)  ←── 半透明浮动卡片
@@ -65,18 +65,18 @@ ShellRoot (shell.qml)
 
 ```
 STARCATCH CLI                         PANEL (QML)
-┌─────────────────┐     text/plain    ┌──────────────────────┐
-│ starcatch todo  │──── Process ────→ │ parseCliOutput()     │
-│ list --all      │                   │ → todos: [...]       │
+┌─────────────────┐     JSON (--json)  ┌──────────────────────┐
+│ starcatch --json│──── Process ────→ │ parseTodos()         │
+│ todo list --all │                   │ → todos: [...]       │
 ├─────────────────┤                   ├──────────────────────┤
-│ starcatch idea  │──── Process ────→ │ parseCliOutput()     │
-│ list -d 7       │                   │ → ideas: [...]       │
+│ starcatch --json│──── Process ────→ │ parseIdeas()         │
+│ idea list -d 7  │                   │ → ideas: [...]       │
 ├─────────────────┤                   ├──────────────────────┤
-│ starcatch log   │──── Process ────→ │ parseCliOutput()     │
-│ list -d 3       │                   │ → logs: [...]        │
+│ starcatch --json│──── Process ────→ │ parseLogs()          │
+│ log list -d 3   │                   │ → logs: [...]        │
 ├─────────────────┤                   ├──────────────────────┤
 │ starcatch pipe  │←─── bash -c ──── │ QuickInput           │
-│ todo/idea/log   │   "echo ... |"   │ Enter 提交            │
+│ todo/idea/log   │   "printf ... |"  │ Enter 提交            │
 └─────────────────┘                   └──────────────────────┘
 ```
 
@@ -98,15 +98,18 @@ which starcatch  # 确认可用
 
 ```
 ~/.config/quickshell/star-panel/  (软链接 → /data/project/star-panel/)
-├── shell.qml   ←── Quickshell 入口（ShellRoot）
-└── src/        ←── 组件目录
-    ├── Panel.qml      主面板窗口
-    ├── TodoList.qml   待办列表
-    ├── IdeaList.qml   灵感列表
-    ├── LogList.qml    日志列表
-    ├── QuickInput.qml 快速输入
-    ├── Colors.qml     主题色（Matugen 集成）
-    └── Config.qml     配置单例
+├── shell.qml          ←── Quickshell 入口（ShellRoot）
+└── src/               ←── 组件目录
+    ├── Panel.qml          主面板窗口
+    ├── TodoList.qml       待办列表
+    ├── IdeaList.qml       灵感列表
+    ├── LogList.qml        日志列表
+    ├── QuickInput.qml     快速输入
+    ├── DetailPopup.qml    详情弹窗（todo 完成/归档等操作）
+    ├── TagList.qml        标签显示组件
+    ├── SettingsPanel.qml  设置面板（主题/宽度/字体）
+    ├── Colors.qml         主题色（Matugen / Catppuccin 预设）
+    └── Config.qml         配置 + 持久化
 ```
 
 所有组件通过软链接部署到 `~/.config/quickshell/star-panel/`，
@@ -189,12 +192,12 @@ qs -c star-panel ipc call panel hide
 |------|-----|
 | 宽度 | 420px + 16px margin |
 | 高度 | 全屏 |
-| 定位 | 右侧（WlrLayershell anchored） |
+| 定位 | 右侧（WlrLayer anchored） |
 | 动画 | slide-in/out 280ms OutQuint |
 | 背景 | 半透明（92% opacity）+ 圆角 16px |
 
 **关键实现细节:**
-- 使用 `WlrLayershell.namespace: "qs-star-panel"` 标识
+- 使用 `WlrLayershell.namespace: "qs-star-panel"` 标识（layer 为 `WrlLayer.Top`）
 - 动画通过 `Behavior on slideOffset` 实现
 - `visible` 条件控制: `panelVisible || slideOffset > -(panelWidth + panelMargin * 2)`
 - 面板通过 `ColumnLayout` 垂直布局: 头部 → 选项卡 → 分隔线 → 内容区 → 快速输入
@@ -214,10 +217,15 @@ qs -c star-panel ipc call panel hide
 | 红色日期 | 已过期 |
 | 橙色日期 | 2 天内到期 |
 
-CLI 输出解析正则:
+CLI 输出通过 `--json` 选项返回 JSON，面板用 `JSON.parse()` 解析:
+
 ```
-/^([🟢🟡🔴])\s+(⬜|✅|📦)\s+(.+?)(?:\s+\[(.+?)\])?\s*\|\s*due:\s*(.+)$/
+starcatch --json todo list --all  →  [{ id, title, priority, status, due_date, tags, ... }, ...]
+starcatch --json idea list -d 7   →  [{ id, title, content, source, tags, ... }, ...]
+starcatch --json log list -d 3    →  [{ id, content, mood, tags, ... }, ...]
 ```
+
+对应解析函数: `parseTodos()` / `parseIdeas()` / `parseLogs()`（`Panel.qml`）。
 
 ### IdeaList.qml
 
@@ -244,19 +252,24 @@ echo "今天好累" | starcatch pipe log
 
 ### Colors.qml
 
-主题色单例。从 `qs_colors.json` 加载，fallback 到 Catppuccin Mocha。
-通过 `Timer { interval: 3000 }` 轮询文件变化，实现热更新。
+主题色单例（普通 Item 单实例，非 `pragma Singleton`）。从 `theme.json` 加载 Matugen 色，fallback 到 Catppuccin Mocha。
+启动时由 `Config.settingsLoader` 完成后调用 `theme.initFromSettings()` 统一驱动，避免 matugen 闪现。
+Matugen 模式下通过 `Timer { interval: 3000 }` 轮询文件变化，实现热更新。
 
 ### Config.qml
 
-配置单例（pragma Singleton），集中管理参数:
+配置单例（普通 Item 单实例，非 `pragma Singleton`），集中管理参数:
 - `panelWidth`: 420
 - `panelMargin`: 8
 - `panelRadius`: 16
 - `animationDuration`: 280
-- `refreshInterval`: 30000 (ms)
 - `defaultTab`: 0
-- `starcatchBin`: "starcatch"
+- 字体大小 6 级: `fontTiny/fontSmall/fontBase/fontMedium/fontLarge/fontXl`
+- `themeName`: "" (Matugen 自动) / "mocha" / "latte" / "frappe" / "macchiato"
+- `todoFilter`: "Pending" / "Done" / "Archived"
+
+> 注：`refreshInterval`（30000ms）硬编码在 `Panel.qml` 的 `autoRefreshTimer`；
+> `starcatch` 二进制路径硬编码在各 `Process.command` 数组中，非 Config 属性。
 
 ---
 
@@ -284,7 +297,7 @@ hl.exec_cmd("qs -c star-panel --daemonize")
 
 ### 6.3 Layer Rule（已配置 ✅）
 
-star-panel 使用 `WlrLayershell.Overlay` 的 `PanelWindow`，
+star-panel 使用 `WrlLayer.Top` 的 `PanelWindow`，
 不适用普通 Hyprland `windowrulev2`，需用 `layer_rule`：
 
 ```lua
@@ -305,7 +318,7 @@ Hyprland
  ├── bind Super+I ──→ qs ipc call panel toggle
  ├── hyprland.start ──→ qs --daemonize (开机启动)
  │
- └── star-panel (WlrLayershell.Overlay)
+  └── star-panel (WrlLayer.Top)
       ├── layer_rule: blur enabled
       └── Process ──→ starcatch CLI ──→ SQLite DB
 ```
@@ -334,7 +347,7 @@ A: 是的，Quickshell 支持 `Quickshell.reload(true)` 热重载，但目前 st
 
 **Q: 如何添加新的数据源？**
 A: 在 Panel.qml 的 `dataFetcher` Item 下添加新的 `Process` 组件，
-在 `onStreamFinished` 中调用 `dataFetcher.parseCliOutput()` 解析，
+在 `onStreamFinished` 中调用 `JSON.parse()` 解析（CLI 需加 `--json` 选项），
 然后将结果赋值给对应属性。
 
 **Q: 为什么用了 `theme` 而不是 `colors`？**
@@ -383,7 +396,7 @@ starcatch idea list -d 7
 starcatch log list -d 3
 ```
 
-如果 CLI 正常但面板无数据，检查 `parseCliOutput()` 正则是否匹配输出格式。
+如果 CLI 正常但面板无数据，检查 `parseTodos()`/`parseIdeas()`/`parseLogs()` 的 JSON 字段映射是否与 CLI `--json` 输出一致。
 
 ### 8.3 IPC 不响应
 
@@ -407,7 +420,7 @@ quickshell -c star-panel --daemonize
 | 属性 | 说明 |
 |------|------|
 | `WlrLayershell.namespace` | 窗口标识 |
-| `WlrLayershell.layer` | 层: `Background / Bottom / Top / Overlay` |
+| `WlrLayershell.layer` | 层: `WrlLayer.Background / Bottom / Top / Overlay`（本项目用 `Top`） |
 | `exclusionMode` | 是否排除出布局: `Ignore / Normal` |
 | `focusable` | 是否可获取焦点 |
 | `anchors.top/bottom/left/right` | 锚定方向 |
