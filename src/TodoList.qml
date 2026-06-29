@@ -15,12 +15,30 @@ Item {
     property bool searchActive: searchField.activeFocus
     readonly property string itemType: "todo"
 
-    // vim gg/dd 状态机
+    // vim gg/dd/gt 状态机
     property bool _pendingG: false
     property bool _pendingD: false
 
+    // 当前高亮项 id —— 用于 model 替换（改状态/30s 刷新）后还原高亮位置
+    property string currentItemId: ""
+    // 最近一次导航到的 index 快照 —— Qt 在 JS 数组 model 替换时会把
+    // currentIndex 重置为 -1，故不能用 onModelChanged 时的 currentIndex，
+    // 必须用导航时快照的 lastIndex 作 fallback。
+    property int lastIndex: 0
+
     function focusSearch() { searchField.forceActiveFocus(); }
     function focusList() { listView.forceActiveFocus(); }
+
+    // 快照当前高亮项的 id 与 index。在每次导航与 onModelChanged 还原后调用，
+    // 早于任何 model 替换，避开 Qt 重置与 delegate 重建竞态。
+    function _trackCurrent() {
+        var m = listView.model;
+        var i = listView.currentIndex;
+        if (i >= 0 && i < m.length && m[i]) {
+            root.currentItemId = m[i].id || "";
+            root.lastIndex = i;
+        }
+    }
 
     // gg 第二次 g 的超时（500ms 内按第二次 g 才算 gg）
     Timer { id: gReset; interval: 500; onTriggered: root._pendingG = false }
@@ -221,16 +239,33 @@ Item {
         spacing: 4
         focus: true
         currentIndex: 0
-        // 保留滚动位置：model 替换（30s 刷新 / 搜索）时回到原 contentY，
-        // 避免列表跳回顶部打断阅读。
+        // 保留滚动位置与高亮项：model 替换（改状态 / 30s 刷新 / 搜索）时
+        // 按 id 还原 currentIndex，避免高亮跳回顶部打断阅读/操作。
+        // 若该项已被过滤掉（如「待办」视图标记完成），保持原位并 clamp，
+        // 高亮自然落到下一项。
         onModelChanged: {
             var savedY = contentY;
-            currentIndex = 0;
+            var targetId = root.currentItemId;
+            var oldIndex = root.lastIndex;
             Qt.callLater(function() {
+                var idx = -1;
+                for (var i = 0; i < model.length; i++) {
+                    if (model[i] && model[i].id === targetId) { idx = i; break; }
+                }
+                if (idx >= 0) {
+                    currentIndex = idx;
+                } else if (oldIndex >= model.length) {
+                    currentIndex = Math.max(0, model.length - 1);
+                } else {
+                    currentIndex = oldIndex;
+                }
                 if (savedY <= contentHeight - height + spacing)
                     contentY = savedY;
                 else
                     contentY = Math.max(0, contentHeight - height);
+                positionViewAtIndex(currentIndex, ListView.Contain);
+                // 还原后快照新当前项，供下次 reload 使用（首次加载也由此初始化 id）
+                root._trackCurrent();
             });
         }
 
@@ -238,23 +273,32 @@ Item {
         KeyNavigation.backtab: searchField
 
         Keys.onPressed: function(event) {
-            if (event.key === Qt.Key_J || event.key === Qt.Key_Down
+            if (event.key === Qt.Key_Escape) {
+                // 弹窗可见时关弹窗（焦点没进弹窗的兜底）；否则不消费，交由全局 Shortcut 关面板
+                if (detailPopup.visible) {
+                    detailPopup.close();
+                    event.accepted = true;
+                }
+            } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down
                 || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_N)) {
                 // j / ↓ / Ctrl+N — 下移
                 if (currentIndex < model.length - 1) currentIndex++;
                 positionViewAtIndex(currentIndex, ListView.Contain);
+                root._trackCurrent();
                 event.accepted = true;
             } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up
                        || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_P)) {
                 // k / ↑ / Ctrl+P — 上移
                 if (currentIndex > 0) currentIndex--;
                 positionViewAtIndex(currentIndex, ListView.Contain);
+                root._trackCurrent();
                 event.accepted = true;
             } else if (event.key === Qt.Key_G && !(event.modifiers & Qt.ShiftModifier)) {
-                // gg — 跳到顶部（500ms 内按两次 g）
+                // gg — 跳到顶部（500ms 内按两次 g 才算 gg）
                 if (root._pendingG) {
                     currentIndex = 0;
                     positionViewAtIndex(0, ListView.Beginning);
+                    root._trackCurrent();
                     root._pendingG = false;
                     gReset.stop();
                 } else {
@@ -267,16 +311,17 @@ Item {
                 if (model.length > 0) {
                     currentIndex = model.length - 1;
                     positionViewAtIndex(currentIndex, ListView.End);
+                    root._trackCurrent();
                 }
                 event.accepted = true;
-            } else if (event.key === Qt.Key_H && !event.modifiers) {
-                // h — 上一个 tab
-                panel.switchTab(-1);
-                event.accepted = true;
-            } else if (event.key === Qt.Key_L && !event.modifiers) {
-                // l — 下一个 tab
-                panel.switchTab(1);
-                event.accepted = true;
+            } else if (event.key === Qt.Key_T) {
+                // gt / gT — vim 风格切换 tab（仅在 _pendingG 即第一次 g 之后触发）
+                if (root._pendingG) {
+                    root._pendingG = false;
+                    gReset.stop();
+                    panel.switchTab(event.modifiers & Qt.ShiftModifier ? -1 : 1);
+                    event.accepted = true;
+                }
             } else if (event.key === Qt.Key_O && !event.modifiers) {
                 // o — 聚焦快速输入（"open new line" → insert mode）
                 quickInput.focusInput();
@@ -412,6 +457,8 @@ Item {
             }
 
             onClicked: {
+                listView.currentIndex = index;
+                root._trackCurrent();
                 detailPopup.type = "todo";
                 detailPopup.itemData = modelData;
                 detailPopup.open();

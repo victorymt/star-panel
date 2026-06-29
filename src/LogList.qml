@@ -14,12 +14,27 @@ Item {
     property bool searchActive: searchField.activeFocus
     readonly property string itemType: "log"
 
-    // vim gg/dd 状态机
+    // vim gg/dd/gt 状态机
     property bool _pendingG: false
     property bool _pendingD: false
 
+    // 当前高亮项 id —— 用于 model 替换后还原高亮位置
+    property string currentItemId: ""
+    // 导航时快照的 index —— Qt 在 JS 数组 model 替换时重置 currentIndex，
+    // 故 onModelChanged 的 fallback 必须用此快照而非当时的 currentIndex。
+    property int lastIndex: 0
+
     function focusSearch() { searchField.forceActiveFocus(); }
     function focusList() { listView.forceActiveFocus(); }
+
+    function _trackCurrent() {
+        var m = listView.model;
+        var i = listView.currentIndex;
+        if (i >= 0 && i < m.length && m[i]) {
+            root.currentItemId = m[i].id || "";
+            root.lastIndex = i;
+        }
+    }
 
     // gg 第二次 g 的超时（500ms 内按第二次 g 才算 gg）
     Timer { id: gReset; interval: 500; onTriggered: root._pendingG = false }
@@ -139,16 +154,30 @@ Item {
         spacing: 4
         focus: true
         currentIndex: 0
-        // 保留滚动位置：model 替换（30s 刷新 / 搜索）时回到原 contentY，
-        // 避免列表跳回顶部打断阅读。
+        // 保留滚动位置与高亮项：model 替换时按 id 还原 currentIndex，
+        // 找不到则保持原位并 clamp，高亮自然落到下一项。
         onModelChanged: {
             var savedY = contentY;
-            currentIndex = 0;
+            var targetId = root.currentItemId;
+            var oldIndex = root.lastIndex;
             Qt.callLater(function() {
+                var idx = -1;
+                for (var i = 0; i < model.length; i++) {
+                    if (model[i] && model[i].id === targetId) { idx = i; break; }
+                }
+                if (idx >= 0) {
+                    currentIndex = idx;
+                } else if (oldIndex >= model.length) {
+                    currentIndex = Math.max(0, model.length - 1);
+                } else {
+                    currentIndex = oldIndex;
+                }
                 if (savedY <= contentHeight - height + spacing)
                     contentY = savedY;
                 else
                     contentY = Math.max(0, contentHeight - height);
+                positionViewAtIndex(currentIndex, ListView.Contain);
+                root._trackCurrent();
             });
         }
 
@@ -156,20 +185,28 @@ Item {
         KeyNavigation.backtab: searchField
 
         Keys.onPressed: function(event) {
-            if (event.key === Qt.Key_J || event.key === Qt.Key_Down
+            if (event.key === Qt.Key_Escape) {
+                if (detailPopup.visible) {
+                    detailPopup.close();
+                    event.accepted = true;
+                }
+            } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down
                 || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_N)) {
                 if (currentIndex < model.length - 1) currentIndex++;
                 positionViewAtIndex(currentIndex, ListView.Contain);
+                root._trackCurrent();
                 event.accepted = true;
             } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up
                        || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_P)) {
                 if (currentIndex > 0) currentIndex--;
                 positionViewAtIndex(currentIndex, ListView.Contain);
+                root._trackCurrent();
                 event.accepted = true;
             } else if (event.key === Qt.Key_G && !(event.modifiers & Qt.ShiftModifier)) {
                 if (root._pendingG) {
                     currentIndex = 0;
                     positionViewAtIndex(0, ListView.Beginning);
+                    root._trackCurrent();
                     root._pendingG = false;
                     gReset.stop();
                 } else {
@@ -181,14 +218,17 @@ Item {
                 if (model.length > 0) {
                     currentIndex = model.length - 1;
                     positionViewAtIndex(currentIndex, ListView.END);
+                    root._trackCurrent();
                 }
                 event.accepted = true;
-            } else if (event.key === Qt.Key_H && !event.modifiers) {
-                panel.switchTab(-1);
-                event.accepted = true;
-            } else if (event.key === Qt.Key_L && !event.modifiers) {
-                panel.switchTab(1);
-                event.accepted = true;
+            } else if (event.key === Qt.Key_T) {
+                // gt / gT — vim 风格切换 tab（仅在 _pendingG 即第一次 g 之后触发）
+                if (root._pendingG) {
+                    root._pendingG = false;
+                    gReset.stop();
+                    panel.switchTab(event.modifiers & Qt.ShiftModifier ? -1 : 1);
+                    event.accepted = true;
+                }
             } else if (event.key === Qt.Key_O && !event.modifiers) {
                 quickInput.focusInput();
                 event.accepted = true;
@@ -280,6 +320,8 @@ Item {
             }
 
             onClicked: {
+                listView.currentIndex = index;
+                root._trackCurrent();
                 detailPopup.type = "log";
                 detailPopup.itemData = modelData;
                 detailPopup.open();

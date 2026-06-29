@@ -22,6 +22,14 @@ Popup {
     x: (parent.width - width) / 2
     y: (parent.height - height) / 2
 
+    // Quickshell 下 Popup 不会自动抢焦点，CloseOnEscape 失灵；
+    // 打开时把焦点交给内容，Esc 才能由 contentItem 的 Keys 处理。
+    onOpened: contentItem.forceActiveFocus()
+    // 关闭后把焦点还给所属列表，保证 gt/j/k 等继续可用。
+    onClosed: {
+        if (parent && parent.focusList) parent.focusList();
+    }
+
     background: Rectangle {
         radius: 12
         color: Qt.rgba(theme.base.r, theme.base.g, theme.base.b, 0.96)
@@ -32,6 +40,14 @@ Popup {
     contentItem: ColumnLayout {
         id: contentColumn
         spacing: 10
+
+        // Escape 关闭弹窗（contentItem 拿到焦点后才生效，见 root.onOpened）
+        Keys.onPressed: function(event) {
+            if (event.key === Qt.Key_Escape) {
+                root.close();
+                event.accepted = true;
+            }
+        }
 
         // Header
         RowLayout {

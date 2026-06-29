@@ -557,14 +557,18 @@ PanelWindow {
     }
 
     // ── 快捷键 ──
-    // Escape：弹窗打开时让弹窗自己处理；快速输入聚焦时让输入框处理
-    // （vim: Esc 从 insert mode 返回 normal mode = 回到列表，不关面板）
+    // Escape：优先关闭可见的详情弹窗（Quickshell 下 Popup 拿不到焦点，
+    // CloseOnEscape 不可靠，故由全局 Shortcut 兜底）；其次关面板。
+    // 快速输入聚焦时让输入框自己处理（vim Esc = 回 normal mode）。
     Shortcut {
         sequence: "Escape"
-        enabled: panelVisible && !settingsPanel.visible
-            && !todoList.detailPopup.visible && !ideaList.detailPopup.visible && !logList.detailPopup.visible
-            && !quickInput.inputActive
-        onActivated: panelVisible = false
+        enabled: panelVisible && !settingsPanel.visible && !quickInput.inputActive
+        onActivated: {
+            if (todoList.detailPopup.visible)        todoList.detailPopup.close();
+            else if (ideaList.detailPopup.visible)  ideaList.detailPopup.close();
+            else if (logList.detailPopup.visible)   logList.detailPopup.close();
+            else                                    panelVisible = false;
+        }
     }
 
     Shortcut { sequence: "Ctrl+1"; enabled: panelVisible; onActivated: tabBar.currentIndex = 0 }
@@ -622,12 +626,16 @@ PanelWindow {
         onActivated: panelVisible = false
     }
 
-    // ── vim/emacs: Ctrl+G 关闭面板（同 Ctrl+Q，弹窗时让弹窗处理） ──
+    // ── vim/emacs: Ctrl+G 关闭（同 Escape 优先级：先关详情弹窗，再关面板） ──
     Shortcut {
         sequence: "Ctrl+G"
         enabled: panelVisible && !settingsPanel.visible
-            && !todoList.detailPopup.visible && !ideaList.detailPopup.visible && !logList.detailPopup.visible
-        onActivated: panelVisible = false
+        onActivated: {
+            if (todoList.detailPopup.visible)        todoList.detailPopup.close();
+            else if (ideaList.detailPopup.visible)  ideaList.detailPopup.close();
+            else if (logList.detailPopup.visible)   logList.detailPopup.close();
+            else                                    panelVisible = false;
+        }
     }
 
     // ── 删除项 Process（vim dd 触发） ──
