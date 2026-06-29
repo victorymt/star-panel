@@ -559,10 +559,12 @@ PanelWindow {
     // ── 快捷键 ──
     // Escape：优先关闭可见的详情弹窗（Quickshell 下 Popup 拿不到焦点，
     // CloseOnEscape 不可靠，故由全局 Shortcut 兜底）；其次关面板。
-    // 快速输入聚焦时让输入框自己处理（vim Esc = 回 normal mode）。
+    // 快速输入 / 搜索框聚焦时让它们自己处理 Esc（窗口级 Shortcut 会抢先
+    // 消费 Esc，导致 TextField 的 Keys.onPressed 收不到）。
     Shortcut {
         sequence: "Escape"
         enabled: panelVisible && !settingsPanel.visible && !quickInput.inputActive
+            && !todoList.searchActive && !ideaList.searchActive && !logList.searchActive
         onActivated: {
             if (todoList.detailPopup.visible)        todoList.detailPopup.close();
             else if (ideaList.detailPopup.visible)  ideaList.detailPopup.close();
@@ -630,6 +632,8 @@ PanelWindow {
     Shortcut {
         sequence: "Ctrl+G"
         enabled: panelVisible && !settingsPanel.visible
+            && !quickInput.inputActive
+            && !todoList.searchActive && !ideaList.searchActive && !logList.searchActive
         onActivated: {
             if (todoList.detailPopup.visible)        todoList.detailPopup.close();
             else if (ideaList.detailPopup.visible)  ideaList.detailPopup.close();
