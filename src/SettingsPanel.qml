@@ -50,13 +50,40 @@ Popup {
             spacing: 8
             width: settingsScroll.availableWidth
 
-        // 标题
-        Text {
-            text: "⚙ 设置"
-            color: theme.text
-            font.pixelSize: cfg.fontXl
-            font.bold: true
-            Layout.bottomMargin: 4
+        // 标题 + 关闭按钮
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Text {
+                text: "⚙ 设置"
+                color: theme.text
+                font.pixelSize: 18
+                font.bold: true
+                Layout.bottomMargin: 4
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Button {
+                flat: true
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+                onClicked: root.close()
+                contentItem: Text {
+                    text: "✕"
+                    color: theme.overlay0
+                    font.pixelSize: 13
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                        : "transparent"
+                }
+            }
         }
 
         // 分隔线
@@ -73,7 +100,7 @@ Popup {
             Text {
                 text: "主题"
                 color: theme.subtext0
-                font.pixelSize: cfg.fontSmall
+                font.pixelSize: 11
                 Layout.preferredWidth: 80
             }
 
@@ -118,7 +145,7 @@ Popup {
                     text: themeCombo.model[themeCombo.currentIndex]
                         ? themeCombo.model[themeCombo.currentIndex].label : ""
                     color: theme.text
-                    font.pixelSize: cfg.fontSmall
+                    font.pixelSize: 11
                     verticalAlignment: Text.AlignVCenter
                 }
 
@@ -139,7 +166,7 @@ Popup {
                     contentItem: Text {
                         text: modelData.label
                         color: themeCombo.currentIndex === index ? theme.text : theme.subtext0
-                        font.pixelSize: cfg.fontSmall
+                        font.pixelSize: 11
                         font.bold: themeCombo.currentIndex === index
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -196,14 +223,14 @@ Popup {
             Text {
                 text: "面板宽度"
                 color: theme.subtext0
-                font.pixelSize: cfg.fontSmall
+                font.pixelSize: 11
                 Layout.preferredWidth: 100
             }
 
             Text {
                 text: cfg.panelWidth + "px"
                 color: theme.text
-                font.pixelSize: cfg.fontBase
+                font.pixelSize: 13
                 font.bold: true
                 Layout.preferredWidth: 48
                 horizontalAlignment: Text.AlignHCenter
@@ -219,7 +246,7 @@ Popup {
                 contentItem: Text {
                     text: "−"
                     color: enabled ? theme.subtext0 : theme.overlay0
-                    font.pixelSize: cfg.fontBase
+                    font.pixelSize: 13
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -242,7 +269,7 @@ Popup {
                 contentItem: Text {
                     text: "+"
                     color: enabled ? theme.subtext0 : theme.overlay0
-                    font.pixelSize: cfg.fontBase
+                    font.pixelSize: 13
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -263,14 +290,14 @@ Popup {
             Text {
                 text: "动画速度"
                 color: theme.subtext0
-                font.pixelSize: cfg.fontSmall
+                font.pixelSize: 11
                 Layout.preferredWidth: 100
             }
 
             Text {
                 text: cfg.animationDuration + "ms"
                 color: theme.text
-                font.pixelSize: cfg.fontBase
+                font.pixelSize: 13
                 font.bold: true
                 Layout.preferredWidth: 48
                 horizontalAlignment: Text.AlignHCenter
@@ -286,7 +313,7 @@ Popup {
                 contentItem: Text {
                     text: "−"
                     color: enabled ? theme.subtext0 : theme.overlay0
-                    font.pixelSize: cfg.fontBase
+                    font.pixelSize: 13
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -309,7 +336,7 @@ Popup {
                 contentItem: Text {
                     text: "+"
                     color: enabled ? theme.subtext0 : theme.overlay0
-                    font.pixelSize: cfg.fontBase
+                    font.pixelSize: 13
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -337,7 +364,7 @@ Popup {
             Text {
                 text: "字体大小"
                 color: theme.subtext1
-                font.pixelSize: cfg.fontTiny
+                font.pixelSize: 10
                 font.bold: true
                 Layout.fillWidth: true
             }
@@ -361,14 +388,14 @@ Popup {
                 Text {
                     text: modelData.label
                     color: theme.subtext0
-                    font.pixelSize: cfg.fontSmall
+                    font.pixelSize: 11
                     Layout.preferredWidth: 100
                 }
 
                 Text {
                     text: cfg[modelData.key]
                     color: theme.text
-                    font.pixelSize: cfg.fontBase
+                    font.pixelSize: 13
                     font.bold: true
                     Layout.preferredWidth: 24
                     horizontalAlignment: Text.AlignHCenter
@@ -384,7 +411,7 @@ Popup {
                     contentItem: Text {
                         text: "−"
                         color: enabled ? theme.subtext0 : theme.overlay0
-                        font.pixelSize: cfg.fontBase
+                        font.pixelSize: 13
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -407,7 +434,7 @@ Popup {
                     contentItem: Text {
                         text: "+"
                         color: enabled ? theme.subtext0 : theme.overlay0
-                        font.pixelSize: cfg.fontBase
+                        font.pixelSize: 13
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -457,7 +484,7 @@ Popup {
             contentItem: Text {
                 text: "恢复默认"
                 color: theme.subtext0
-                font.pixelSize: cfg.fontSmall
+                font.pixelSize: 11
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
             }
@@ -473,7 +500,7 @@ Popup {
         Text {
             text: "修改即时生效 · 重启后保留"
             color: theme.overlay0
-            font.pixelSize: cfg.fontTiny
+            font.pixelSize: 10
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
         }

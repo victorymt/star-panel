@@ -17,6 +17,12 @@ Item {
     // 供列表的 vim `o` 调用：聚焦输入框（进入 insert mode）
     function focusInput() { textInput.forceActiveFocus(); }
 
+    // 供列表的 vim `:` 调用：进命令模式（设 ":" 自动触发 onTextChanged）
+    function enterCommandMode() {
+        textInput.text = ":";
+        textInput.forceActiveFocus();
+    }
+
     // 面板打开时延迟聚焦，配合滑入动画
     Connections {
         target: panel
@@ -66,10 +72,12 @@ Item {
             property int selectedIndex: 0
 
             function filter(text) {
-                var raw = text.slice(1).toLowerCase();
+                // 取 ":" 之后、空格前的首段作为命令名，忽略后续参数；
+                // 同时支持包含匹配（:a → :idea），更符合 vim 模糊回忆
+                var raw = text.slice(1).split(" ")[0].toLowerCase();
                 if (!raw) { candidates = allCommands; return; }
                 candidates = allCommands.filter(function(c) {
-                    return c.cmd.indexOf(raw) === 1;
+                    return c.cmd.indexOf(raw, 1) >= 1;
                 });
             }
 
@@ -140,10 +148,25 @@ Item {
             anchors.rightMargin: 6
             spacing: 6
 
+            // 模式徽章（vim 风格 INSERT/NORMAL/CMD）
+            Text {
+                text: root.cmdMode ? "⌨ CMD"
+                    : (textInput.activeFocus ? "✎ INSERT" : "▸ NORMAL")
+                color: root.cmdMode ? (theme ? theme.blue : "#89b4fa")
+                    : (textInput.activeFocus ? (theme ? theme.green : "#a6e3a1")
+                                             : (theme ? theme.overlay0 : "#6c7086"))
+                font.pixelSize: cfg.fontTiny
+                font.bold: true
+                Layout.preferredWidth: 64
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
             // 类型选择指示器
             Text {
-                text: root.cmdMode ? "⌨" : typeSelector.typeModels[typeSelector.currentIndex].icon
+                text: typeSelector.typeModels[typeSelector.currentIndex].icon
                 font.pixelSize: cfg.fontMedium
+                visible: !root.cmdMode
             }
 
             // 快速输入框
@@ -184,10 +207,13 @@ Item {
                 Keys.onPressed: function(event) {
                     if (event.key === Qt.Key_Tab) {
                         event.accepted = true;
+                        var shift = event.modifiers & Qt.ShiftModifier;
                         if (root.cmdMode && cmdPanel.candidates.length > 0) {
-                            cmdPanel.selectedIndex = (cmdPanel.selectedIndex + 1) % cmdPanel.candidates.length;
+                            var len = cmdPanel.candidates.length;
+                            cmdPanel.selectedIndex = (cmdPanel.selectedIndex + (shift ? -1 : 1) + len) % len;
                         } else {
-                            typeSelector.currentIndex = (typeSelector.currentIndex + 1) % typeSelector.typeModels.length;
+                            var tlen = typeSelector.typeModels.length;
+                            typeSelector.currentIndex = (typeSelector.currentIndex + (shift ? -1 : 1) + tlen) % tlen;
                         }
                     } else if (event.key === Qt.Key_Down && root.cmdMode) {
                         cmdPanel.selectedIndex = Math.min(cmdPanel.selectedIndex + 1, cmdPanel.candidates.length - 1);
@@ -216,9 +242,14 @@ Item {
                 }
 
                 function executeCommand(cmd) {
-                    switch (cmd) {
+                    // 统一取冒号后、空格前的首段作为命令名，忽略参数
+                    var name = cmd.split(" ")[0];
+                    switch (name) {
                         case ":q":    panel.panelVisible = false; break;
-                        case ":r":    panel.reloadData(); break;
+                        case ":r":
+                            panel.reloadData();
+                            panel.showToast("🔄 刷新中...");
+                            break;
                         case ":s":
                             if (settingsPanel.visible) settingsPanel.close();
                             else settingsPanel.open();
@@ -232,6 +263,12 @@ Item {
                             panel.openHelp();
                             textInput.text = "";
                             root.cmdMode = false;
+                            return;
+                        default:
+                            panel.showToast("⚠️ 未知命令 " + name + " · :help 查看全部");
+                            textInput.text = "";
+                            root.cmdMode = false;
+                            textInput.forceActiveFocus();
                             return;
                     }
                     textInput.text = "";
@@ -247,6 +284,12 @@ Item {
 
                 Keys.onReturnPressed: {
                     if (root.cmdMode) {
+                        if (cmdPanel.candidates.length === 0) {
+                            panel.showToast("⚠️ 未知命令 · :help 查看全部");
+                            textInput.text = "";
+                            root.cmdMode = false;
+                            return;
+                        }
                         executeSelected();
                         return;
                     }
@@ -312,6 +355,8 @@ Item {
                 if (exitCode !== 0) {
                     var detail = pipeStderr.text.trim();
                     panel.showToast("❌ 捕获失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
+                } else {
+                    panel.showToast("✨ 已捕获");
                 }
                 if (pendingType) {
                     panel.reloadData(pendingType);

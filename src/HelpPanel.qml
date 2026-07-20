@@ -51,18 +51,45 @@ Popup {
             spacing: 6
             width: helpScroll.availableWidth
 
-            // 标题
-            Text {
-                text: "❓ 帮助"
-                color: theme.text
-                font.pixelSize: cfg.fontXl
-                font.bold: true
-                Layout.bottomMargin: 2
+            // 标题 + 关闭按钮
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Text {
+                    text: "❓ 帮助"
+                    color: theme.text
+                    font.pixelSize: cfg.fontXl
+                    font.bold: true
+                    Layout.bottomMargin: 2
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Button {
+                    flat: true
+                    Layout.preferredWidth: 28
+                    Layout.preferredHeight: 28
+                    onClicked: root.close()
+                    contentItem: Text {
+                        text: "✕"
+                        color: theme.overlay0
+                        font.pixelSize: cfg.fontBase
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        radius: 6
+                        color: parent.hovered
+                            ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                            : "transparent"
+                    }
+                }
             }
 
             // 引导
             Text {
-                text: "输入 :help 重新打开 · Esc 关闭"
+                text: "输入 :help 重新打开 · 输入框中 Esc 先回列表再关面板 · q/Ctrl+Q 任意位置关"
                 color: theme.overlay0
                 font.pixelSize: cfg.fontTiny
                 Layout.fillWidth: true
@@ -81,28 +108,31 @@ Popup {
             Repeater {
                 model: [
                     { section: "全局" },
-                    { key: "Esc / Ctrl+G", desc: "关弹窗或关面板" },
+                    { key: "Esc", desc: "关弹窗或关面板（输入框/搜索框中先回列表）" },
+                    { key: "q / Ctrl+Q", desc: "任意位置关弹窗或关面板" },
                     { key: "Ctrl+1 / 2 / 3", desc: "切到 待办 / 灵感 / 日志" },
                     { key: "Ctrl+Tab", desc: "下一个标签" },
                     { key: "Ctrl+Shift+Tab", desc: "上一个标签" },
                     { key: "/ / Ctrl+F", desc: "聚焦搜索框" },
                     { key: "Ctrl+R", desc: "刷新数据" },
                     { key: "Ctrl+,", desc: "打开设置" },
-                    { key: "Ctrl+Q", desc: "关闭面板" },
                     { section: "列表 · vim" },
                     { key: "j / k", desc: "下移 / 上移" },
-                    { key: "gg", desc: "跳到顶部" },
+                    { key: "gg", desc: "跳到顶部（1s 内按两次 g）" },
                     { key: "G", desc: "跳到底部" },
                     { key: "gt / gT", desc: "下一个 / 上一个标签" },
-                    { key: "o", desc: "聚焦快速输入" },
+                    { key: "o", desc: "聚焦快速输入（insert mode）" },
+                    { key: ":", desc: "进命令模式" },
+                    { key: "q", desc: "关弹窗或关面板" },
                     { key: "dd", desc: "删除当前项（再按 d 确认）" },
                     { key: "e", desc: "编辑当前项" },
                     { key: "Enter", desc: "查看详情" },
+                    { key: "1 / 2 / 3", desc: "切 Todo 过滤器：待办 / 已完成 / 已归档" },
                     { section: "搜索框" },
                     { key: "Esc", desc: "清空 / 失焦" },
                     { key: "Ctrl+A / Ctrl+E", desc: "行首 / 行尾" },
-                    { section: "快速输入" },
-                    { key: "Tab", desc: "切换类型（待办 / 灵感 / 日志）" },
+                    { section: "快速输入 · 模式徽章" },
+                    { key: "Tab / Shift+Tab", desc: "切换类型（正/反向）；命令模式切换候选" },
                     { key: ":", desc: "进入命令模式" },
                     { key: ":q", desc: "关闭面板" },
                     { key: ":r", desc: "刷新数据" },

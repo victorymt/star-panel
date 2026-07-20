@@ -51,6 +51,20 @@ PanelWindow {
         helpPanel.open();
     }
 
+    // ── 关闭最顶层弹窗或面板本身（Esc / q / Ctrl+Q 共用） ──
+    // 优先级：help → settings → edit/detail 弹窗 → 面板
+    function closeTopOrSelf() {
+        if (helpPanel.visible)                 helpPanel.close();
+        else if (settingsPanel.visible)        settingsPanel.close();
+        else if (todoList.editPopup.visible)   todoList.editPopup.close();
+        else if (ideaList.editPopup.visible)   ideaList.editPopup.close();
+        else if (logList.editPopup.visible)    logList.editPopup.close();
+        else if (todoList.detailPopup.visible) todoList.detailPopup.close();
+        else if (ideaList.detailPopup.visible) ideaList.detailPopup.close();
+        else if (logList.detailPopup.visible)  logList.detailPopup.close();
+        else                                   panelVisible = false;
+    }
+
     // ── 切换 tab（vim h/l 用） ──
     function switchTab(delta) {
         var len = tabBar.tabs.length;
@@ -565,21 +579,15 @@ PanelWindow {
     }
 
     // ── 快捷键 ──
+    // Escape：优先关闭可见的详情弹窗（Quickshell 下 Popup 拿不到焦点，
+    // CloseOnEscape 不可靠，故由全局 Shortcut 兜底）；其次关面板。
+    // 快速输入 / 搜索框聚焦时让它们自己处理 Esc（窗口级 Shortcut 会抢先
+    // 消费 Esc，导致 TextField 的 Keys.onPressed 收不到）。
     Shortcut {
         sequence: "Escape"
         enabled: panelVisible && !quickInput.inputActive
             && !todoList.searchActive && !ideaList.searchActive && !logList.searchActive
-        onActivated: {
-            if (helpPanel.visible)                 helpPanel.close();
-            else if (settingsPanel.visible)        settingsPanel.close();
-            else if (todoList.editPopup.visible)        todoList.editPopup.close();
-            else if (ideaList.editPopup.visible)  ideaList.editPopup.close();
-            else if (logList.editPopup.visible)   logList.editPopup.close();
-            else if (todoList.detailPopup.visible)        todoList.detailPopup.close();
-            else if (ideaList.detailPopup.visible)  ideaList.detailPopup.close();
-            else if (logList.detailPopup.visible)   logList.detailPopup.close();
-            else                                    panelVisible = false;
-        }
+        onActivated: panel.closeTopOrSelf()
     }
 
     Shortcut { sequence: "Ctrl+1"; enabled: panelVisible; onActivated: tabBar.currentIndex = 0 }
@@ -621,39 +629,25 @@ PanelWindow {
     }
 
     // ── 操作快捷 ──
+    // Ctrl+R 刷新（与 :r 命令一致，附带 toast 反馈）
     Shortcut {
         sequence: "Ctrl+R"
         enabled: panelVisible
-        onActivated: dataFetcher.reload()
+        onActivated: {
+            dataFetcher.reload();
+            panel.showToast("🔄 刷新中...");
+        }
     }
     Shortcut {
         sequence: "Ctrl+,"
         enabled: panelVisible
         onActivated: settingsPanel.visible ? settingsPanel.close() : settingsPanel.open()
     }
+    // Ctrl+Q 关闭最顶层弹窗或面板（Ctrl+G 在 Qt6.11/Wayland 下被吞为 BEL，用 Ctrl+Q 替代）
     Shortcut {
         sequence: "Ctrl+Q"
         enabled: panelVisible
-        onActivated: panelVisible = false
-    }
-
-    // ── vim/emacs: Ctrl+G 关闭（同 Escape 优先级：先关详情弹窗，再关面板） ──
-    Shortcut {
-        sequence: "Ctrl+G"
-        enabled: panelVisible
-            && !quickInput.inputActive
-            && !todoList.searchActive && !ideaList.searchActive && !logList.searchActive
-        onActivated: {
-            if (helpPanel.visible)                 helpPanel.close();
-            else if (settingsPanel.visible)        settingsPanel.close();
-            else if (todoList.editPopup.visible)        todoList.editPopup.close();
-            else if (ideaList.editPopup.visible)  ideaList.editPopup.close();
-            else if (logList.editPopup.visible)   logList.editPopup.close();
-            else if (todoList.detailPopup.visible)        todoList.detailPopup.close();
-            else if (ideaList.detailPopup.visible)  ideaList.detailPopup.close();
-            else if (logList.detailPopup.visible)   logList.detailPopup.close();
-            else                                    panelVisible = false;
-        }
+        onActivated: panel.closeTopOrSelf()
     }
 
     // ── 删除项 Process（vim dd 触发） ──

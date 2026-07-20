@@ -36,10 +36,10 @@ Item {
         }
     }
 
-    // gg 第二次 g 的超时（500ms 内按第二次 g 才算 gg）
-    Timer { id: gReset; interval: 500; onTriggered: root._pendingG = false }
-    // dd 第二次 d 的超时（1.5s 内按第二次 d 才算 dd）
-    Timer { id: dReset; interval: 1500; onTriggered: root._pendingD = false }
+    // gg 第二次 g 的超时（1s 内按第二次 g 才算 gg，对齐 vim 默认 timeoutlen）
+    Timer { id: gReset; interval: 1000; onTriggered: root._pendingG = false }
+    // dd 第二次 d 的超时（2.5s 内按第二次 d 才算 dd，与 toast 时长对齐）
+    Timer { id: dReset; interval: 2500; onTriggered: root._pendingD = false }
 
     // 过滤后的列表（搜索）—— 与 listView.model 同源，供空状态判断使用
     readonly property var filteredItems: {
@@ -190,6 +190,14 @@ Item {
                     detailPopup.close();
                     event.accepted = true;
                 }
+            } else if (event.key === Qt.Key_Q && !event.modifiers) {
+                // q — vim :q 等价，关弹窗或关面板（Ctrl+G 在 Qt6.11/Wayland 被吞，用 q 替代）
+                panel.closeTopOrSelf();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Colon && !event.modifiers) {
+                // : — vim 进命令模式（交给 QuickInput 处理）
+                quickInput.enterCommandMode();
+                event.accepted = true;
             } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down
                 || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_N)) {
                 if (currentIndex < model.length - 1) currentIndex++;
@@ -238,7 +246,12 @@ Item {
                     dReset.stop();
                     if (currentIndex >= 0 && currentIndex < model.length && model[currentIndex].id) {
                         panel.deleteItem(root.itemType, model[currentIndex].id);
+                        panel.showToast("🗑️ 删除中...");
+                    } else {
+                        panel.showToast("⚠️ 该项没有 id，无法删除");
                     }
+                } else if (model.length === 0) {
+                    panel.showToast("📭 列表为空");
                 } else {
                     root._pendingD = true;
                     dReset.restart();
@@ -249,6 +262,8 @@ Item {
                 // e — 编辑当前项（vim 风格）
                 if (currentIndex >= 0 && currentIndex < model.length && model[currentIndex].id) {
                     editPopup.openEdit(root.itemType, model[currentIndex].id);
+                } else {
+                    panel.showToast("📭 列表为空");
                 }
                 event.accepted = true;
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
@@ -257,6 +272,8 @@ Item {
                     detailPopup.type = "idea";
                     detailPopup.itemData = item;
                     detailPopup.open();
+                } else {
+                    panel.showToast("📭 列表为空");
                 }
                 event.accepted = true;
             }

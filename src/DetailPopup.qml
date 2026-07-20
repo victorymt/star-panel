@@ -301,24 +301,77 @@ Popup {
             }
         }
 
-        // ── Close button for non-todo ──
-        Button {
-            Layout.fillWidth: true
+        // ── Idea/Log 操作按钮（编辑 + 删除 + 关闭） ──
+        RowLayout {
+            spacing: 8
             visible: type !== "todo"
-            flat: true
-            contentItem: Text {
-                text: "关闭"
-                color: theme.overlay0
-                font.pixelSize: cfg.fontSmall
-                horizontalAlignment: Text.AlignHCenter
+            Layout.fillWidth: true
+
+            Button {
+                Layout.fillWidth: true
+                flat: true
+                contentItem: Text {
+                    text: "✏️ 编辑"
+                    color: theme.blue
+                    font.pixelSize: cfg.fontSmall
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                        : "transparent"
+                }
+                onClicked: {
+                    if (!itemData.id) { panel.showToast("⚠️ 该项没有 id，无法编辑"); return; }
+                    // 关闭详情 → 打开编辑（避免两个 popup 叠加）
+                    root.close();
+                    if (parent && parent.editPopup) parent.editPopup.openEdit(root.type, itemData.id);
+                }
             }
-            background: Rectangle {
-                radius: 6
-                color: parent.hovered
-                    ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
-                    : "transparent"
+
+            Button {
+                Layout.fillWidth: true
+                flat: true
+                contentItem: Text {
+                    text: "🗑️ 删除"
+                    color: theme.peach
+                    font.pixelSize: cfg.fontSmall
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                        : "transparent"
+                }
+                onClicked: {
+                    if (!itemData.id) { panel.showToast("⚠️ 该项没有 id，无法删除"); return; }
+                    panel.deleteItem(root.type, itemData.id);
+                    panel.showToast("🗑️ 删除中...");
+                    root.close();
+                }
             }
-            onClicked: root.close()
+
+            Button {
+                Layout.fillWidth: true
+                flat: true
+                contentItem: Text {
+                    text: "关闭"
+                    color: theme.overlay0
+                    font.pixelSize: cfg.fontSmall
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                        : "transparent"
+                }
+                onClicked: root.close()
+            }
         }
     }
 

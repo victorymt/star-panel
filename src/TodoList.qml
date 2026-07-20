@@ -40,10 +40,10 @@ Item {
         }
     }
 
-    // gg 第二次 g 的超时（500ms 内按第二次 g 才算 gg）
-    Timer { id: gReset; interval: 500; onTriggered: root._pendingG = false }
-    // dd 第二次 d 的超时（1.5s 内按第二次 d 才算 dd）
-    Timer { id: dReset; interval: 1500; onTriggered: root._pendingD = false }
+    // gg 第二次 g 的超时（1s 内按第二次 g 才算 gg，对齐 vim 默认 timeoutlen）
+    Timer { id: gReset; interval: 1000; onTriggered: root._pendingG = false }
+    // dd 第二次 d 的超时（2.5s 内按第二次 d 才算 dd，与 toast 时长对齐）
+    Timer { id: dReset; interval: 2500; onTriggered: root._pendingD = false }
 
     // 过滤后的列表（状态 + 搜索）
     readonly property var filteredItems: {
@@ -77,13 +77,12 @@ Item {
         }
     }
 
-    // ── 过滤器栏（含搜索） ──
-    RowLayout {
+    // ── 过滤器栏（chips + 搜索框，两行布局，与 Idea/Log 对齐） ──
+    ColumnLayout {
         id: filterBar
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 32
         spacing: 4
 
         property var filters: [
@@ -92,49 +91,54 @@ Item {
             { label: "📦 已归档", status: "Archived" }
         ]
 
-        Repeater {
-            model: filterBar.filters
+        // 第一行：过滤 chips
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 4
 
-            delegate: Button {
-                required property var modelData
-                required property int index
+            Repeater {
+                model: filterBar.filters
 
-                flat: true
-                onClicked: root.filterStatus = modelData.status
-                Layout.preferredWidth: implicitWidth
+                delegate: Button {
+                    required property var modelData
+                    required property int index
 
-                contentItem: Text {
-                    text: modelData.label
-                    color: root.filterStatus === modelData.status ? colors.text : colors.overlay0
-                    font.pixelSize: cfg.fontSmall
-                    font.bold: root.filterStatus === modelData.status
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
+                    flat: true
+                    onClicked: root.filterStatus = modelData.status
+                    Layout.preferredWidth: implicitWidth
 
-                background: Rectangle {
-                    radius: 6
-                    color: root.filterStatus === modelData.status
-                        ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.5)
-                        : parent.hovered || parent.visualFocus
-                            ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.25)
-                            : "transparent"
+                    contentItem: Text {
+                        text: modelData.label
+                        color: root.filterStatus === modelData.status ? colors.text : colors.overlay0
+                        font.pixelSize: cfg.fontSmall
+                        font.bold: root.filterStatus === modelData.status
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    background: Rectangle {
+                        radius: 6
+                        color: root.filterStatus === modelData.status
+                            ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.5)
+                            : parent.hovered || parent.visualFocus
+                                ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.25)
+                                : "transparent"
+                    }
                 }
             }
+
+            Item { Layout.fillWidth: true }
         }
 
-        Item { Layout.fillWidth: true }
-
-        // 嵌入式搜索框
+        // 第二行：搜索框（占满宽度，与 IdeaList/LogList 一致）
         TextField {
             id: searchField
-            Layout.preferredWidth: 120
-            Layout.maximumWidth: 180
-            height: 26
+            Layout.fillWidth: true
+            Layout.preferredHeight: 28
             placeholderText: "🔍 搜索"
             placeholderTextColor: colors ? colors.overlay0 : "#6c7086"
             color: colors ? colors.text : "#cdd6f4"
-            font.pixelSize: cfg.fontTiny
+            font.pixelSize: cfg.fontSmall
             verticalAlignment: Text.AlignVCenter
             leftPadding: 6
             rightPadding: clearBtn.visible ? 20 : 6
@@ -279,6 +283,24 @@ Item {
                     detailPopup.close();
                     event.accepted = true;
                 }
+            } else if (event.key === Qt.Key_Q && !event.modifiers) {
+                // q — vim :q 等价，关弹窗或关面板（Ctrl+G 在 Qt6.11/Wayland 被吞，用 q 替代）
+                panel.closeTopOrSelf();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Colon && !event.modifiers) {
+                // : — vim 进命令模式（交给 QuickInput 处理）
+                quickInput.enterCommandMode();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_1 && !event.modifiers) {
+                // 1/2/3 — 切 Todo 过滤器（与 Ctrl+1/2/3 切 tab 不冲突）
+                root.filterStatus = "Pending";
+                event.accepted = true;
+            } else if (event.key === Qt.Key_2 && !event.modifiers) {
+                root.filterStatus = "Done";
+                event.accepted = true;
+            } else if (event.key === Qt.Key_3 && !event.modifiers) {
+                root.filterStatus = "Archived";
+                event.accepted = true;
             } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down
                 || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_N)) {
                 // j / ↓ / Ctrl+N — 下移
@@ -327,13 +349,18 @@ Item {
                 quickInput.focusInput();
                 event.accepted = true;
             } else if (event.key === Qt.Key_D && !event.modifiers) {
-                // dd — 删除当前项（1.5s 内按两次 d 确认）
+                // dd — 删除当前项（2.5s 内按两次 d 确认，与 toast 时长对齐）
                 if (root._pendingD) {
                     root._pendingD = false;
                     dReset.stop();
                     if (currentIndex >= 0 && currentIndex < model.length && model[currentIndex].id) {
                         panel.deleteItem(root.itemType, model[currentIndex].id);
+                        panel.showToast("🗑️ 删除中...");
+                    } else {
+                        panel.showToast("⚠️ 该项没有 id，无法删除");
                     }
+                } else if (model.length === 0) {
+                    panel.showToast("📭 列表为空");
                 } else {
                     root._pendingD = true;
                     dReset.restart();
@@ -344,6 +371,8 @@ Item {
                 // e — 编辑当前项（vim 风格）
                 if (currentIndex >= 0 && currentIndex < model.length && model[currentIndex].id) {
                     editPopup.openEdit(root.itemType, model[currentIndex].id);
+                } else {
+                    panel.showToast("📭 列表为空");
                 }
                 event.accepted = true;
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
@@ -352,6 +381,8 @@ Item {
                     detailPopup.type = "todo";
                     detailPopup.itemData = item;
                     detailPopup.open();
+                } else {
+                    panel.showToast("📭 列表为空");
                 }
                 event.accepted = true;
             }
