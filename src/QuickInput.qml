@@ -13,17 +13,9 @@ Item {
     implicitHeight: 40
     property alias inputActive: textInput.activeFocus
     property bool cmdMode: false
-    property bool helpVisible: false
 
     // 供列表的 vim `o` 调用：聚焦输入框（进入 insert mode）
     function focusInput() { textInput.forceActiveFocus(); }
-
-    Timer {
-        id: helpTimer
-        interval: 2500
-        repeat: false
-        onTriggered: root.helpVisible = false
-    }
 
     // 面板打开时延迟聚焦，配合滑入动画
     Connections {
@@ -58,7 +50,7 @@ Item {
             anchors.bottomMargin: 4
             anchors.left: parent.left
             anchors.right: parent.right
-            visible: (root.cmdMode || root.helpVisible) && candidates.length > 0
+            visible: root.cmdMode && candidates.length > 0
             spacing: 1
 
             property var allCommands: [
@@ -227,11 +219,20 @@ Item {
                     switch (cmd) {
                         case ":q":    panel.panelVisible = false; break;
                         case ":r":    panel.reloadData(); break;
-                        case ":s":    settingsPanel.visible ? settingsPanel.close() : settingsPanel.open(); break;
+                        case ":s":
+                            if (settingsPanel.visible) settingsPanel.close();
+                            else settingsPanel.open();
+                            textInput.text = "";
+                            root.cmdMode = false;
+                            return;
                         case ":todo": typeSelector.currentIndex = 0; break;
                         case ":idea": typeSelector.currentIndex = 1; break;
                         case ":log":  typeSelector.currentIndex = 2; break;
-                        case ":help": root.helpVisible = true; helpTimer.start(); break;
+                        case ":help":
+                            panel.openHelp();
+                            textInput.text = "";
+                            root.cmdMode = false;
+                            return;
                     }
                     textInput.text = "";
                     root.cmdMode = false;

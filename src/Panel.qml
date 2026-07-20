@@ -46,6 +46,11 @@ PanelWindow {
         toast.show();
     }
 
+    // ── 打开帮助面板（供 QuickInput 的 :help 命令调用） ──
+    function openHelp() {
+        helpPanel.open();
+    }
+
     // ── 切换 tab（vim h/l 用） ──
     function switchTab(delta) {
         var len = tabBar.tabs.length;
@@ -554,19 +559,20 @@ PanelWindow {
 
         // ── 设置面板 ──
         SettingsPanel { id: settingsPanel }
+
+        // ── 帮助面板 ──
+        HelpPanel { id: helpPanel }
     }
 
     // ── 快捷键 ──
-    // Escape：优先关闭可见的详情弹窗（Quickshell 下 Popup 拿不到焦点，
-    // CloseOnEscape 不可靠，故由全局 Shortcut 兜底）；其次关面板。
-    // 快速输入 / 搜索框聚焦时让它们自己处理 Esc（窗口级 Shortcut 会抢先
-    // 消费 Esc，导致 TextField 的 Keys.onPressed 收不到）。
     Shortcut {
         sequence: "Escape"
-        enabled: panelVisible && !settingsPanel.visible && !quickInput.inputActive
+        enabled: panelVisible && !quickInput.inputActive
             && !todoList.searchActive && !ideaList.searchActive && !logList.searchActive
         onActivated: {
-            if (todoList.editPopup.visible)        todoList.editPopup.close();
+            if (helpPanel.visible)                 helpPanel.close();
+            else if (settingsPanel.visible)        settingsPanel.close();
+            else if (todoList.editPopup.visible)        todoList.editPopup.close();
             else if (ideaList.editPopup.visible)  ideaList.editPopup.close();
             else if (logList.editPopup.visible)   logList.editPopup.close();
             else if (todoList.detailPopup.visible)        todoList.detailPopup.close();
@@ -634,11 +640,13 @@ PanelWindow {
     // ── vim/emacs: Ctrl+G 关闭（同 Escape 优先级：先关详情弹窗，再关面板） ──
     Shortcut {
         sequence: "Ctrl+G"
-        enabled: panelVisible && !settingsPanel.visible
+        enabled: panelVisible
             && !quickInput.inputActive
             && !todoList.searchActive && !ideaList.searchActive && !logList.searchActive
         onActivated: {
-            if (todoList.editPopup.visible)        todoList.editPopup.close();
+            if (helpPanel.visible)                 helpPanel.close();
+            else if (settingsPanel.visible)        settingsPanel.close();
+            else if (todoList.editPopup.visible)        todoList.editPopup.close();
             else if (ideaList.editPopup.visible)  ideaList.editPopup.close();
             else if (logList.editPopup.visible)   logList.editPopup.close();
             else if (todoList.detailPopup.visible)        todoList.detailPopup.close();
