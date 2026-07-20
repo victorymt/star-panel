@@ -245,6 +245,12 @@ Item {
                     panel.showToast("再按 d 确认删除");
                 }
                 event.accepted = true;
+            } else if (event.key === Qt.Key_E && !event.modifiers) {
+                // e — 编辑当前项（vim 风格）
+                if (currentIndex >= 0 && currentIndex < model.length && model[currentIndex].id) {
+                    editPopup.openEdit(root.itemType, model[currentIndex].id);
+                }
+                event.accepted = true;
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 if (currentIndex >= 0 && currentIndex < model.length) {
                     var item = model[currentIndex];
@@ -330,4 +336,5 @@ Item {
     }
 
     DetailPopup { id: detailPopup }
+    EditPopup { id: editPopup }
 }

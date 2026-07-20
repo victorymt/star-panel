@@ -566,7 +566,10 @@ PanelWindow {
         enabled: panelVisible && !settingsPanel.visible && !quickInput.inputActive
             && !todoList.searchActive && !ideaList.searchActive && !logList.searchActive
         onActivated: {
-            if (todoList.detailPopup.visible)        todoList.detailPopup.close();
+            if (todoList.editPopup.visible)        todoList.editPopup.close();
+            else if (ideaList.editPopup.visible)  ideaList.editPopup.close();
+            else if (logList.editPopup.visible)   logList.editPopup.close();
+            else if (todoList.detailPopup.visible)        todoList.detailPopup.close();
             else if (ideaList.detailPopup.visible)  ideaList.detailPopup.close();
             else if (logList.detailPopup.visible)   logList.detailPopup.close();
             else                                    panelVisible = false;
@@ -635,7 +638,10 @@ PanelWindow {
             && !quickInput.inputActive
             && !todoList.searchActive && !ideaList.searchActive && !logList.searchActive
         onActivated: {
-            if (todoList.detailPopup.visible)        todoList.detailPopup.close();
+            if (todoList.editPopup.visible)        todoList.editPopup.close();
+            else if (ideaList.editPopup.visible)  ideaList.editPopup.close();
+            else if (logList.editPopup.visible)   logList.editPopup.close();
+            else if (todoList.detailPopup.visible)        todoList.detailPopup.close();
             else if (ideaList.detailPopup.visible)  ideaList.detailPopup.close();
             else if (logList.detailPopup.visible)   logList.detailPopup.close();
             else                                    panelVisible = false;
