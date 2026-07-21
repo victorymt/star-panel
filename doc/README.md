@@ -174,7 +174,7 @@ qs -c star-panel ipc call panel hide
 | 列表中关弹窗/关面板 | `q` | vim `:q` 等价（无修饰键）；Ctrl+G 在 Qt6.11/Wayland 被吞为 BEL，故用 q 替代 |
 | 切到待办/灵感/日志 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | 直达指定 tab |
 | 下一个/上一个 tab | `Ctrl+Tab` / `Ctrl+Shift+Tab` | 循环切换 |
-| 聚焦搜索框 | `/` / `Ctrl+F` | 当前 tab 的搜索框；搜索框聚焦时不拦截 |
+| 聚焦搜索框 | `/` | 当前 tab 的搜索框 |
 | 刷新数据 | `Ctrl+R` | 重新拉取三类数据 |
 | 打开/关闭设置 | `Ctrl+,` | 切换设置弹窗 |
 
@@ -183,8 +183,12 @@ qs -c star-panel ipc call panel hide
 | 操作 | 触发 | 说明 |
 |------|------|------|
 | 下移 / 上移 | `j` / `k` （或 ↑↓ / Ctrl+N/P） | vim 风格导航 |
+| 上一个 / 下一个 tab | `h` / `l` | vim 风格左右切 tab |
 | 跳到顶部 / 底部 | `gg` / `G` | gg 需 1s 内按两次 g |
+| 半页上 / 下 | `Ctrl+U` / `Ctrl+D` | vim 风格半页滚动 |
+| 整页上 / 下 | `Ctrl+B` / `Ctrl+F` | vim 风格整页滚动 |
 | 下一个 / 上一个 tab | `gt` / `gT` | vim 风格切 tab |
+| 刷新当前 / 全部 | `r` / `R` | 当前列表或三类数据 |
 | 聚焦快速输入 | `o` | "open new line" → insert mode |
 | 进命令模式 | `:` | vim 风格，交给 QuickInput 处理 |
 | 关弹窗/关面板 | `q` | vim `:q` 等价 |
@@ -194,12 +198,14 @@ qs -c star-panel ipc call panel hide
 | 切 Todo 过滤器 | `1` / `2` / `3` | Pending / Done / Archived（仅 TodoList） |
 | 关详情弹窗 | `Esc` | 焦点在列表时的兜底 |
 
-#### 搜索框
+#### 输入编辑 · emacs
 
 | 操作 | 触发 | 说明 |
 |------|------|------|
 | 清空 / 失焦 | `Esc` | 有内容时清空，无内容时焦点回列表；再按 Esc 关面板 |
-| 行首 / 行尾 | `Ctrl+A` / `Ctrl+E` | emacs 绑定 |
+| 行首 / 行尾 | `Ctrl+A` / `Ctrl+E` | 搜索、快速输入、编辑弹窗可用 |
+| 左移 / 右移 | `Ctrl+B` / `Ctrl+F` | 搜索、快速输入、编辑弹窗可用 |
+| 删到行尾 / 清空 | `Ctrl+K` / `Ctrl+U` | 搜索、快速输入、编辑弹窗可用 |
 
 #### 快速输入 · 模式徽章
 
@@ -213,16 +219,20 @@ qs -c star-panel ipc call panel hide
 | 上下选命令 | `↑` / `↓` | 命令模式下移动选中 |
 | 执行命令 | `Enter` | 执行选中候选；带参数忽略（`:s todo` 等价 `:s`） |
 | 退出命令模式 | `Esc` | 清空输入框，焦点回列表；再按 Esc 关面板 |
-| 行首 / 行尾 | `Ctrl+A` / `Ctrl+E` | emacs 绑定 |
+| 文本编辑 | `Ctrl+A/E/B/F/K/U` | 同上面的 emacs 输入编辑 |
 
 #### 命令模式命令
 
 | 命令 | 作用 |
 |------|------|
 | `:q` | 关闭面板 |
-| `:r` | 刷新数据 |
+| `:r` / `:reload` | 刷新数据 |
 | `:s` | 打开 / 关闭设置面板 |
 | `:todo` / `:idea` / `:log` | 切换输入类型 |
+| `:open` | 查看当前项 |
+| `:e` / `:edit` | 编辑当前项 |
+| `:d` / `:delete` | 删除当前项 |
+| `:done` / `:archive` / `:reopen` | 当前待办状态操作 |
 | `:help` | 显示帮助弹窗 |
 
 #### Todo 过滤器（TodoList 聚焦时）

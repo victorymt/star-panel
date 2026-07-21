@@ -15,6 +15,9 @@ const {
   pipeCompletionDecision,
   deleteCompletionDecision,
   editLoadResult,
+  commandAction,
+  normalModeAction,
+  emacsEditResult,
   filterByStatus,
   filterByText
 } = require("./parsers");
@@ -300,6 +303,42 @@ test("editLoadResult non-zero exit falls back to exit code", () => {
     data: null,
     error: "加载失败（退出码 127）"
   });
+});
+
+// ── vim/emacs UX actions ──
+test("commandAction maps current item commands", () => {
+  assert.strictEqual(commandAction(":open", "idea"), "openCurrent");
+  assert.strictEqual(commandAction(":e", "log"), "editCurrent");
+  assert.strictEqual(commandAction(":edit", "log"), "editCurrent");
+  assert.strictEqual(commandAction(":d", "idea"), "deleteCurrent");
+  assert.strictEqual(commandAction(":delete", "idea"), "deleteCurrent");
+});
+test("commandAction gates todo-only commands", () => {
+  assert.strictEqual(commandAction(":done", "todo"), "done");
+  assert.strictEqual(commandAction(":archive", "todo"), "archive");
+  assert.strictEqual(commandAction(":reopen", "todo"), "reopen");
+  assert.strictEqual(commandAction(":done", "idea"), "todoOnly");
+});
+test("normalModeAction maps vim paging and tabs", () => {
+  assert.strictEqual(normalModeAction("h"), "prevTab");
+  assert.strictEqual(normalModeAction("l"), "nextTab");
+  assert.strictEqual(normalModeAction("D", {ctrl: true}), "halfPageDown");
+  assert.strictEqual(normalModeAction("U", {ctrl: true}), "halfPageUp");
+  assert.strictEqual(normalModeAction("F", {ctrl: true}), "pageDown");
+  assert.strictEqual(normalModeAction("B", {ctrl: true}), "pageUp");
+  assert.strictEqual(normalModeAction("r"), "reloadCurrent");
+  assert.strictEqual(normalModeAction("R"), "reloadAll");
+});
+test("emacsEditResult moves cursor", () => {
+  assert.deepStrictEqual(emacsEditResult("abc", 1, "A"), { text: "abc", cursor: 0 });
+  assert.deepStrictEqual(emacsEditResult("abc", 1, "E"), { text: "abc", cursor: 3 });
+  assert.deepStrictEqual(emacsEditResult("abc", 1, "B"), { text: "abc", cursor: 0 });
+  assert.deepStrictEqual(emacsEditResult("abc", 1, "F"), { text: "abc", cursor: 2 });
+});
+test("emacsEditResult kills text", () => {
+  assert.deepStrictEqual(emacsEditResult("abc", 1, "K"), { text: "a", cursor: 1 });
+  assert.deepStrictEqual(emacsEditResult("ab\ncd", 1, "K"), { text: "a\ncd", cursor: 1 });
+  assert.deepStrictEqual(emacsEditResult("abc", 2, "U"), { text: "", cursor: 0 });
 });
 
 // ── All done ──

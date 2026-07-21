@@ -56,16 +56,25 @@ Item {
             anchors.bottomMargin: 4
             anchors.left: parent.left
             anchors.right: parent.right
-            visible: root.cmdMode && candidates.length > 0
+            visible: root.cmdMode
             spacing: 1
 
             property var allCommands: [
                 { cmd: ":q",     desc: "关闭面板" },
                 { cmd: ":r",     desc: "刷新数据" },
+                { cmd: ":reload", desc: "刷新数据" },
                 { cmd: ":s",     desc: "设置面板" },
                 { cmd: ":todo",  desc: "切换为待办输入" },
                 { cmd: ":idea",  desc: "切换为灵感输入" },
                 { cmd: ":log",   desc: "切换为日志输入" },
+                { cmd: ":open",  desc: "查看当前项" },
+                { cmd: ":e",     desc: "编辑当前项" },
+                { cmd: ":edit",  desc: "编辑当前项" },
+                { cmd: ":d",     desc: "删除当前项" },
+                { cmd: ":delete", desc: "删除当前项" },
+                { cmd: ":done",  desc: "标记当前待办完成" },
+                { cmd: ":archive", desc: "归档当前待办" },
+                { cmd: ":reopen", desc: "恢复当前待办" },
                 { cmd: ":help",  desc: "显示帮助" }
             ]
             property var candidates: allCommands
@@ -83,7 +92,7 @@ Item {
 
             Rectangle {
                 Layout.fillWidth: true
-                implicitHeight: cmdList.count * 26 + 8
+                implicitHeight: Math.max(32, cmdList.count * 26 + 8)
                 radius: 8
                 color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.95)
                 border.width: 1
@@ -137,6 +146,17 @@ Item {
                                 }
                             }
                         }
+                    }
+
+                    Text {
+                        visible: cmdPanel.candidates.length === 0
+                        text: "无匹配命令"
+                        color: theme.overlay0
+                        font.pixelSize: cfg.fontSmall
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 24
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                     }
                 }
             }
@@ -230,14 +250,8 @@ Item {
                         textInput.text = "";
                         panel.focusCurrentList();
                         event.accepted = true;
-                    } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_A) {
-                        // emacs Ctrl+A — 行首
-                        textInput.cursorPosition = 0;
-                        event.accepted = true;
-                    } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_E) {
-                        // emacs Ctrl+E — 行尾
-                        textInput.cursorPosition = textInput.text.length;
-                        event.accepted = true;
+                    } else if (panel.handleEmacsEdit(textInput, event)) {
+                        return;
                     }
                 }
 
@@ -247,6 +261,7 @@ Item {
                     switch (name) {
                         case ":q":    panel.panelVisible = false; break;
                         case ":r":
+                        case ":reload":
                             panel.reloadData();
                             panel.showToast("🔄 刷新中...");
                             break;
@@ -259,6 +274,26 @@ Item {
                         case ":todo": typeSelector.currentIndex = 0; break;
                         case ":idea": typeSelector.currentIndex = 1; break;
                         case ":log":  typeSelector.currentIndex = 2; break;
+                        case ":open":
+                            panel.openCurrentItem();
+                            break;
+                        case ":e":
+                        case ":edit":
+                            panel.editCurrentItem();
+                            break;
+                        case ":d":
+                        case ":delete":
+                            panel.deleteCurrentItem();
+                            break;
+                        case ":done":
+                            panel.runCurrentTodoAction("done");
+                            break;
+                        case ":archive":
+                            panel.runCurrentTodoAction("archive");
+                            break;
+                        case ":reopen":
+                            panel.runCurrentTodoAction("reopen");
+                            break;
                         case ":help":
                             panel.openHelp();
                             textInput.text = "";

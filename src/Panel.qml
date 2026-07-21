@@ -76,6 +76,59 @@ PanelWindow {
         else logList.focusList();
     }
 
+    function currentList() {
+        if (tabBar.currentIndex === 0) return todoList;
+        if (tabBar.currentIndex === 1) return ideaList;
+        return logList;
+    }
+
+    function openCurrentItem() {
+        currentList().openCurrentItem();
+    }
+
+    function editCurrentItem() {
+        currentList().editCurrentItem();
+    }
+
+    function deleteCurrentItem() {
+        currentList().deleteCurrentItem();
+    }
+
+    function runCurrentTodoAction(cmd) {
+        if (tabBar.currentIndex !== 0) {
+            showToast("⚠️ 该命令只适用于待办");
+            return;
+        }
+        todoList.runTodoAction(cmd);
+    }
+
+    function handleEmacsEdit(field, event) {
+        if (!(event.modifiers & Qt.ControlModifier)) return false;
+        if (event.key === Qt.Key_A) {
+            field.cursorPosition = 0;
+        } else if (event.key === Qt.Key_E) {
+            field.cursorPosition = field.text.length;
+        } else if (event.key === Qt.Key_B) {
+            field.cursorPosition = Math.max(0, field.cursorPosition - 1);
+        } else if (event.key === Qt.Key_F) {
+            field.cursorPosition = Math.min(field.text.length, field.cursorPosition + 1);
+        } else if (event.key === Qt.Key_K) {
+            var pos = field.cursorPosition;
+            var end = field.text.indexOf("\n", pos);
+            field.text = end >= 0
+                ? field.text.slice(0, pos) + field.text.slice(end)
+                : field.text.slice(0, pos);
+            field.cursorPosition = pos;
+        } else if (event.key === Qt.Key_U) {
+            field.text = "";
+            field.cursorPosition = 0;
+        } else {
+            return false;
+        }
+        event.accepted = true;
+        return true;
+    }
+
     // ── 删除项（vim dd 用） ──
     function deleteItem(type, id, onSuccess) {
         if (!id) { showToast("⚠️ 该项没有 id，无法删除"); return; }
@@ -745,17 +798,6 @@ PanelWindow {
             else logList.focusSearch();
         }
     }
-    Shortcut {
-        sequence: "Ctrl+F"
-        enabled: panelVisible && !quickInput.inputActive
-            && !todoList.searchActive && !ideaList.searchActive && !logList.searchActive
-        onActivated: {
-            if (tabBar.currentIndex === 0) todoList.focusSearch();
-            else if (tabBar.currentIndex === 1) ideaList.focusSearch();
-            else logList.focusSearch();
-        }
-    }
-
     // ── 操作快捷 ──
     // Ctrl+R 刷新（与 :r 命令一致，附带 toast 反馈）
     Shortcut {

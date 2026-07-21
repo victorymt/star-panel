@@ -27,6 +27,48 @@ Item {
     function focusSearch() { searchField.forceActiveFocus(); }
     function focusList() { listView.forceActiveFocus(); }
 
+    function currentItem() {
+        var m = listView.model;
+        var i = listView.currentIndex;
+        return (i >= 0 && i < m.length) ? m[i] : null;
+    }
+
+    function openCurrentItem() {
+        var item = currentItem();
+        if (!item) { panel.showToast("📭 列表为空"); return; }
+        detailPopup.type = "log";
+        detailPopup.itemData = item;
+        detailPopup.open();
+    }
+
+    function editCurrentItem() {
+        var item = currentItem();
+        if (item && item.id) editPopup.openEdit(root.itemType, item.id);
+        else panel.showToast("📭 列表为空");
+    }
+
+    function deleteCurrentItem() {
+        var item = currentItem();
+        if (item && item.id) {
+            panel.deleteItem(root.itemType, item.id);
+            panel.showToast("🗑️ 删除中...");
+        } else {
+            panel.showToast("⚠️ 该项没有 id，无法删除");
+        }
+    }
+
+    function moveByRows(delta) {
+        if (listView.model.length === 0) return;
+        listView.currentIndex = Math.max(0, Math.min(listView.model.length - 1, listView.currentIndex + delta));
+        listView.positionViewAtIndex(listView.currentIndex, ListView.Contain);
+        root._trackCurrent();
+    }
+
+    function movePage(direction, fraction) {
+        var rows = Math.max(1, Math.floor((listView.height / 56) * fraction));
+        moveByRows(direction * rows);
+    }
+
     function _trackCurrent() {
         var m = listView.model;
         var i = listView.currentIndex;
@@ -87,12 +129,8 @@ Item {
                         listView.forceActiveFocus();
                     }
                     event.accepted = true;
-                } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_A) {
-                    searchField.cursorPosition = 0;
-                    event.accepted = true;
-                } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_E) {
-                    searchField.cursorPosition = searchField.text.length;
-                    event.accepted = true;
+                } else if (panel.handleEmacsEdit(searchField, event)) {
+                    return;
                 }
             }
 
@@ -194,21 +232,35 @@ Item {
                 // q — vim :q 等价，关弹窗或关面板（Ctrl+G 在 Qt6.11/Wayland 被吞，用 q 替代）
                 panel.closeTopOrSelf();
                 event.accepted = true;
+            } else if (event.key === Qt.Key_H && !event.modifiers) {
+                panel.switchTab(-1);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_L && !event.modifiers) {
+                panel.switchTab(1);
+                event.accepted = true;
             } else if (event.key === Qt.Key_Colon && !event.modifiers) {
                 // : — vim 进命令模式（交给 QuickInput 处理）
                 quickInput.enterCommandMode();
                 event.accepted = true;
             } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down
                 || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_N)) {
-                if (currentIndex < model.length - 1) currentIndex++;
-                positionViewAtIndex(currentIndex, ListView.Contain);
-                root._trackCurrent();
+                root.moveByRows(1);
                 event.accepted = true;
             } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up
                        || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_P)) {
-                if (currentIndex > 0) currentIndex--;
-                positionViewAtIndex(currentIndex, ListView.Contain);
-                root._trackCurrent();
+                root.moveByRows(-1);
+                event.accepted = true;
+            } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_D) {
+                root.movePage(1, 0.5);
+                event.accepted = true;
+            } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_U) {
+                root.movePage(-1, 0.5);
+                event.accepted = true;
+            } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_F) {
+                root.movePage(1, 1.0);
+                event.accepted = true;
+            } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_B) {
+                root.movePage(-1, 1.0);
                 event.accepted = true;
             } else if (event.key === Qt.Key_G && !(event.modifiers & Qt.ShiftModifier)) {
                 if (root._pendingG) {
@@ -240,16 +292,19 @@ Item {
             } else if (event.key === Qt.Key_O && !event.modifiers) {
                 quickInput.focusInput();
                 event.accepted = true;
+            } else if (event.key === Qt.Key_R && !event.modifiers) {
+                panel.reloadData(root.itemType);
+                panel.showToast("🔄 刷新当前列表...");
+                event.accepted = true;
+            } else if (event.key === Qt.Key_R && (event.modifiers & Qt.ShiftModifier)) {
+                panel.reloadData();
+                panel.showToast("🔄 刷新中...");
+                event.accepted = true;
             } else if (event.key === Qt.Key_D && !event.modifiers) {
                 if (root._pendingD) {
                     root._pendingD = false;
                     dReset.stop();
-                    if (currentIndex >= 0 && currentIndex < model.length && model[currentIndex].id) {
-                        panel.deleteItem(root.itemType, model[currentIndex].id);
-                        panel.showToast("🗑️ 删除中...");
-                    } else {
-                        panel.showToast("⚠️ 该项没有 id，无法删除");
-                    }
+                    root.deleteCurrentItem();
                 } else if (model.length === 0) {
                     panel.showToast("📭 列表为空");
                 } else {
@@ -260,21 +315,10 @@ Item {
                 event.accepted = true;
             } else if (event.key === Qt.Key_E && !event.modifiers) {
                 // e — 编辑当前项（vim 风格）
-                if (currentIndex >= 0 && currentIndex < model.length && model[currentIndex].id) {
-                    editPopup.openEdit(root.itemType, model[currentIndex].id);
-                } else {
-                    panel.showToast("📭 列表为空");
-                }
+                root.editCurrentItem();
                 event.accepted = true;
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                if (currentIndex >= 0 && currentIndex < model.length) {
-                    var item = model[currentIndex];
-                    detailPopup.type = "log";
-                    detailPopup.itemData = item;
-                    detailPopup.open();
-                } else {
-                    panel.showToast("📭 列表为空");
-                }
+                root.openCurrentItem();
                 event.accepted = true;
             }
         }

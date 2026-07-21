@@ -161,6 +161,51 @@ function editLoadResult(exitCode, stdoutText, stderrText) {
   }
 }
 
+function commandAction(name, currentTab) {
+  switch (name) {
+    case ":open": return "openCurrent";
+    case ":e":
+    case ":edit": return "editCurrent";
+    case ":d":
+    case ":delete": return "deleteCurrent";
+    case ":done":
+    case ":archive":
+    case ":reopen": return currentTab === "todo" ? name.slice(1) : "todoOnly";
+    case ":r":
+    case ":reload": return "reloadAll";
+    default: return "unknown";
+  }
+}
+
+function normalModeAction(key, modifiers) {
+  modifiers = modifiers || {};
+  if (modifiers.ctrl && key === "D") return "halfPageDown";
+  if (modifiers.ctrl && key === "U") return "halfPageUp";
+  if (modifiers.ctrl && key === "F") return "pageDown";
+  if (modifiers.ctrl && key === "B") return "pageUp";
+  if (key === "h") return "prevTab";
+  if (key === "l") return "nextTab";
+  if (key === "r") return "reloadCurrent";
+  if (key === "R") return "reloadAll";
+  return "";
+}
+
+function emacsEditResult(text, cursor, key) {
+  if (key === "A") return { text: text, cursor: 0 };
+  if (key === "E") return { text: text, cursor: text.length };
+  if (key === "B") return { text: text, cursor: Math.max(0, cursor - 1) };
+  if (key === "F") return { text: text, cursor: Math.min(text.length, cursor + 1) };
+  if (key === "U") return { text: "", cursor: 0 };
+  if (key === "K") {
+    var end = text.indexOf("\n", cursor);
+    return {
+      text: end >= 0 ? text.slice(0, cursor) + text.slice(end) : text.slice(0, cursor),
+      cursor: cursor
+    };
+  }
+  return { text: text, cursor: cursor };
+}
+
 // Search/filter helpers (mirrors QML logic in TodoList/IdeaList/LogList)
 function filterByStatus(items, status) {
   return items.filter(function(item) { return item.rawStatus === status; });
@@ -192,6 +237,9 @@ module.exports = {
   pipeCompletionDecision,
   deleteCompletionDecision,
   editLoadResult,
+  commandAction,
+  normalModeAction,
+  emacsEditResult,
   filterByStatus,
   filterByText
 };

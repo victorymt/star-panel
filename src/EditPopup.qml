@@ -255,6 +255,7 @@ Popup {
                 placeholderText: "必填"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
+                Keys.onPressed: function(event) { panel.handleEmacsEdit(titleField, event); }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
@@ -282,6 +283,8 @@ Popup {
                 Keys.onPressed: function(event) {
                     if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
                         root.save(); event.accepted = true;
+                    } else {
+                        panel.handleEmacsEdit(descField, event);
                     }
                 }
             }
@@ -334,6 +337,7 @@ Popup {
                 placeholderText: "YYYY-MM-DD 或 明天/next Monday · 留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
+                Keys.onPressed: function(event) { panel.handleEmacsEdit(dueField, event); }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
@@ -352,6 +356,7 @@ Popup {
                 placeholderText: "逗号分隔 · 留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
+                Keys.onPressed: function(event) { panel.handleEmacsEdit(tagsField, event); }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
@@ -370,6 +375,7 @@ Popup {
                 placeholderText: "留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
+                Keys.onPressed: function(event) { panel.handleEmacsEdit(projectField, event); }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
@@ -395,6 +401,7 @@ Popup {
                 placeholderText: "必填"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
+                Keys.onPressed: function(event) { panel.handleEmacsEdit(ideaTitleField, event); }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
@@ -422,6 +429,8 @@ Popup {
                 Keys.onPressed: function(event) {
                     if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
                         root.save(); event.accepted = true;
+                    } else {
+                        panel.handleEmacsEdit(contentField, event);
                     }
                 }
             }
@@ -436,6 +445,7 @@ Popup {
                 placeholderText: "留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
+                Keys.onPressed: function(event) { panel.handleEmacsEdit(sourceField, event); }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
@@ -454,6 +464,7 @@ Popup {
                 placeholderText: "逗号分隔 · 留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
+                Keys.onPressed: function(event) { panel.handleEmacsEdit(ideaTagsField, event); }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
@@ -472,6 +483,7 @@ Popup {
                 placeholderText: "留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
+                Keys.onPressed: function(event) { panel.handleEmacsEdit(ideaProjectField, event); }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
@@ -506,6 +518,8 @@ Popup {
                 Keys.onPressed: function(event) {
                     if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
                         root.save(); event.accepted = true;
+                    } else {
+                        panel.handleEmacsEdit(logContentField, event);
                     }
                 }
             }
@@ -520,6 +534,7 @@ Popup {
                 placeholderText: "如 happy / sad · 留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
+                Keys.onPressed: function(event) { panel.handleEmacsEdit(moodField, event); }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
@@ -538,6 +553,7 @@ Popup {
                 placeholderText: "逗号分隔 · 留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
+                Keys.onPressed: function(event) { panel.handleEmacsEdit(logTagsField, event); }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
@@ -556,6 +572,7 @@ Popup {
                 placeholderText: "留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
+                Keys.onPressed: function(event) { panel.handleEmacsEdit(logProjectField, event); }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
