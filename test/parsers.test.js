@@ -21,6 +21,7 @@ const {
   editLoadResult,
   commandAction,
   normalModeAction,
+  todoShortcutAction,
   emacsEditResult,
   filterByStatus,
   filterByText
@@ -392,6 +393,16 @@ test("normalModeAction maps vim paging and tabs", () => {
   assert.strictEqual(normalModeAction("B", {ctrl: true}), "pageUp");
   assert.strictEqual(normalModeAction("r"), "reloadCurrent");
   assert.strictEqual(normalModeAction("R"), "reloadAll");
+});
+test("todoShortcutAction maps completion toggle", () => {
+  assert.strictEqual(todoShortcutAction("Space", "Pending"), "done");
+  assert.strictEqual(todoShortcutAction("Space", "Done"), "reopen");
+  assert.strictEqual(todoShortcutAction("Space", "Archived"), "reopen");
+});
+test("todoShortcutAction maps archive shortcut", () => {
+  assert.strictEqual(todoShortcutAction("a", "Pending"), "archive");
+  assert.strictEqual(todoShortcutAction("a", "Done"), "archive");
+  assert.strictEqual(todoShortcutAction("a", "Archived"), "alreadyArchived");
 });
 test("emacsEditResult moves cursor", () => {
   assert.deepStrictEqual(emacsEditResult("abc", 1, "A"), { text: "abc", cursor: 0 });

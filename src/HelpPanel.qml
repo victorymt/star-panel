@@ -132,6 +132,7 @@ Popup {
                     { key: "e", desc: "编辑当前项" },
                     { key: "Enter", desc: "查看详情" },
                     { key: "1 / 2 / 3", desc: "切 Todo 过滤器：待办 / 已完成 / 已归档" },
+                    { key: "Space / a", desc: "Todo 完成/恢复 / 归档" },
                     { section: "输入编辑 · emacs" },
                     { key: "Esc", desc: "清空 / 失焦" },
                     { key: "Ctrl+A / Ctrl+E", desc: "行首 / 行尾" },

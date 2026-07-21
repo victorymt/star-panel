@@ -56,7 +56,7 @@ star-panel 面向 Vim / Emacs 用户做了完整键盘路径：
 |------|--------|
 | 全局 | `Esc` / `Ctrl+Q` 关闭弹窗或面板，`Ctrl+1/2/3` 切 tab，`/` 聚焦搜索，`Ctrl+R` 刷新 |
 | 列表 normal mode | `j/k` 上下，`h/l` 切 tab，`gg/G` 顶部/底部，`Ctrl+U/D` 半页，`Ctrl+B/F` 整页 |
-| 列表操作 | `Enter` 查看，`e` 编辑，`dd` 删除，`r/R` 刷新当前/全部，`o` 进入快速输入，`:` 进入命令模式 |
+| 列表操作 | `Enter` 查看，`Space` 完成/恢复 Todo，`a` 归档 Todo，`e` 编辑，`dd` 删除，`r/R` 刷新当前/全部，`o` 进入快速输入，`:` 进入命令模式 |
 | 命令模式 | `:open`、`:e/:edit`、`:d/:delete`、`:done/:archive/:reopen`、`:r/:reload`、`:help` |
 | Emacs 编辑 | 搜索、快速输入、编辑弹窗支持 `Ctrl+A/E/B/F/K/U` |
 

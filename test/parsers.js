@@ -271,6 +271,12 @@ function normalModeAction(key, modifiers) {
   return "";
 }
 
+function todoShortcutAction(key, rawStatus) {
+  if (key === "Space") return rawStatus === "Pending" ? "done" : "reopen";
+  if (key === "a") return rawStatus === "Archived" ? "alreadyArchived" : "archive";
+  return "";
+}
+
 function emacsEditResult(text, cursor, key) {
   if (key === "A") return { text: text, cursor: 0 };
   if (key === "E") return { text: text, cursor: text.length };
@@ -324,6 +330,7 @@ module.exports = {
   editLoadResult,
   commandAction,
   normalModeAction,
+  todoShortcutAction,
   emacsEditResult,
   filterByStatus,
   filterByText

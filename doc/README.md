@@ -197,6 +197,7 @@ qs -c star-panel ipc call panel hide
 | 编辑当前项 | `e` | 打开编辑弹窗 |
 | 查看详情 | `Enter` | 打开详情弹窗 |
 | 切 Todo 过滤器 | `1` / `2` / `3` | Pending / Done / Archived（仅 TodoList） |
+| Todo 状态操作 | `Space` / `a` | 完成/恢复当前 Todo；归档当前 Todo |
 | 关详情弹窗 | `Esc` | 焦点在列表时的兜底 |
 
 #### 输入编辑 · emacs
@@ -241,6 +242,8 @@ qs -c star-panel ipc call panel hide
 | 操作 | 触发 | 说明 |
 |------|------|------|
 | 切到待办/已完成/已归档 | `1` / `2` / `3` | 与 Ctrl+1/2/3 切 tab 不冲突（那个带 Ctrl） |
+| 完成/恢复当前项 | `Space` | Pending → Done；Done/Archived → Pending |
+| 归档当前项 | `a` | 非 Archived 当前项归档 |
 | 点击 chips | 鼠标点击 | 也可切换过滤器 |
 
 ### 4.4 交互说明

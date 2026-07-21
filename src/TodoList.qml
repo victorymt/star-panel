@@ -67,6 +67,22 @@ Item {
         detailPopup.runAction(cmd, "todo");
     }
 
+    function toggleCurrentTodoDone() {
+        var item = currentItem();
+        if (!item || !item.id) { panel.showToast("📭 列表为空"); return; }
+        runTodoAction(item.rawStatus === "Pending" ? "done" : "reopen");
+    }
+
+    function archiveCurrentTodo() {
+        var item = currentItem();
+        if (!item || !item.id) { panel.showToast("📭 列表为空"); return; }
+        if (item.rawStatus === "Archived") {
+            panel.showToast("📦 已归档");
+            return;
+        }
+        runTodoAction("archive");
+    }
+
     function moveByRows(delta) {
         if (listView.model.length === 0) return;
         listView.currentIndex = Math.max(0, Math.min(listView.model.length - 1, listView.currentIndex + delta));
@@ -351,6 +367,14 @@ Item {
             } else if (event.key === Qt.Key_3 && !event.modifiers) {
                 root.filterStatus = "Archived";
                 event.accepted = true;
+            } else if (event.key === Qt.Key_Space && !event.modifiers) {
+                // Space — Pending 标记完成，Done/Archived 恢复待办。
+                root.toggleCurrentTodoDone();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_A && !event.modifiers) {
+                // a — 归档当前待办。
+                root.archiveCurrentTodo();
+                event.accepted = true;
             } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down
                 || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_N)) {
                 // j / ↓ / Ctrl+N — 下移
@@ -450,6 +474,20 @@ Item {
             width: ListView.view.width
             implicitHeight: Math.max(48, contentRow.implicitHeight + 16)
             highlighted: ListView.isCurrentItem
+
+            Keys.onPressed: function(event) {
+                if (event.key === Qt.Key_Space && !event.modifiers) {
+                    listView.currentIndex = index;
+                    root._trackCurrent();
+                    root.toggleCurrentTodoDone();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_A && !event.modifiers) {
+                    listView.currentIndex = index;
+                    root._trackCurrent();
+                    root.archiveCurrentTodo();
+                    event.accepted = true;
+                }
+            }
 
             contentItem: RowLayout {
                 id: contentRow
