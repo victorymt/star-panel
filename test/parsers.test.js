@@ -1,5 +1,23 @@
 const assert = require("assert");
-const { parseJson, formatDate, parseTodos, parseIdeas, parseLogs, shellQuote, filterByStatus, filterByText } = require("./parsers");
+const {
+  parseJson,
+  formatDate,
+  parseTodos,
+  parseIdeas,
+  parseLogs,
+  shellQuote,
+  firstLine,
+  parseListJson,
+  listFetchResult,
+  normalizeReloadType,
+  mergeQueuedReload,
+  completionDecision,
+  pipeCompletionDecision,
+  deleteCompletionDecision,
+  editLoadResult,
+  filterByStatus,
+  filterByText
+} = require("./parsers");
 
 let passed = 0;
 function test(desc, fn) { try { fn(); passed++; } catch(e) { console.error("FAIL:", desc); throw e; } }
@@ -135,6 +153,154 @@ test("simple string", () => assert.strictEqual(shellQuote("hello"), "'hello'"));
 test("single quote escaped", () => assert.strictEqual(shellQuote("it's"), "'it'\\''s'"));
 test("empty string", () => assert.strictEqual(shellQuote(""), "''"));
 test("multiple single quotes", () => assert.strictEqual(shellQuote("a'b'c"), "'a'\\''b'\\''c'"));
+test("path with spaces", () => assert.strictEqual(shellQuote("/home/me/My Config/settings.json"), "'/home/me/My Config/settings.json'"));
+test("path with single quote", () => assert.strictEqual(shellQuote("/home/o'hara/settings.json"), "'/home/o'\\''hara/settings.json'"));
+
+// ── fetch result handling ──
+test("firstLine trims and takes stderr first line", () => {
+  assert.strictEqual(firstLine("  boom\nmore detail\n"), "boom");
+  assert.strictEqual(firstLine(""), "");
+  assert.strictEqual(firstLine(null), "");
+});
+test("parseListJson requires JSON array", () => {
+  assert.deepStrictEqual(parseListJson('[{"id":"1"}]'), [{id: "1"}]);
+  assert.throws(() => parseListJson('{"id":"1"}'), /expected JSON array/);
+});
+test("listFetchResult success JSON", () => {
+  assert.deepStrictEqual(listFetchResult("todo", 0, '[{"id":"1"}]', ""), {
+    ok: true,
+    items: [{id: "1"}],
+    error: ""
+  });
+});
+test("listFetchResult empty stdout", () => {
+  assert.deepStrictEqual(listFetchResult("idea", 0, "", ""), {
+    ok: true,
+    items: [],
+    error: "灵感数据为空，请确认 Starcatch 可用"
+  });
+});
+test("listFetchResult invalid JSON preserves caller data", () => {
+  const result = listFetchResult("log", 0, "not json", "");
+  assert.strictEqual(result.ok, false);
+  assert.strictEqual(result.items, null);
+  assert.match(result.error, /^日志解析失败：/);
+});
+test("listFetchResult non-zero exit prefers stderr", () => {
+  assert.deepStrictEqual(listFetchResult("todo", 2, "", "db locked\ntrace"), {
+    ok: false,
+    items: null,
+    error: "待办获取失败：db locked"
+  });
+});
+test("listFetchResult non-zero exit falls back to exit code", () => {
+  assert.deepStrictEqual(listFetchResult("log", 127, "", ""), {
+    ok: false,
+    items: null,
+    error: "日志获取失败（退出码 127）"
+  });
+});
+
+// ── reload queue handling ──
+test("normalizeReloadType defaults to all", () => {
+  assert.strictEqual(normalizeReloadType("todo"), "todo");
+  assert.strictEqual(normalizeReloadType("idea"), "idea");
+  assert.strictEqual(normalizeReloadType("log"), "log");
+  assert.strictEqual(normalizeReloadType(undefined), "all");
+  assert.strictEqual(normalizeReloadType("bad"), "all");
+});
+test("mergeQueuedReload keeps same single type", () => {
+  assert.strictEqual(mergeQueuedReload("", "todo"), "todo");
+  assert.strictEqual(mergeQueuedReload("todo", "todo"), "todo");
+});
+test("mergeQueuedReload promotes different singles to all", () => {
+  assert.strictEqual(mergeQueuedReload("todo", "idea"), "all");
+  assert.strictEqual(mergeQueuedReload("idea", "log"), "all");
+});
+test("mergeQueuedReload keeps all priority", () => {
+  assert.strictEqual(mergeQueuedReload("all", "todo"), "all");
+  assert.strictEqual(mergeQueuedReload("todo", undefined), "all");
+});
+
+// ── popup completion decisions ──
+test("completionDecision success closes and reloads", () => {
+  assert.deepStrictEqual(completionDecision(0, "todo"), {
+    close: true,
+    reloadType: "todo"
+  });
+});
+test("completionDecision failure keeps popup open", () => {
+  assert.deepStrictEqual(completionDecision(1, "todo"), {
+    close: false,
+    reloadType: ""
+  });
+});
+
+// ── pipe completion decisions ──
+test("pipeCompletionDecision success clears input and reloads", () => {
+  assert.deepStrictEqual(pipeCompletionDecision(0, "idea", "new idea"), {
+    restoreText: "",
+    reloadType: "idea",
+    clearPending: true
+  });
+});
+test("pipeCompletionDecision failure restores input and skips reload", () => {
+  assert.deepStrictEqual(pipeCompletionDecision(1, "todo", "buy tea"), {
+    restoreText: "buy tea",
+    reloadType: "",
+    clearPending: true
+  });
+});
+
+// ── delete completion decisions ──
+test("deleteCompletionDecision success reloads and calls success callback", () => {
+  assert.deepStrictEqual(deleteCompletionDecision(0, "log", true), {
+    callSuccess: true,
+    reloadType: "log"
+  });
+});
+test("deleteCompletionDecision failure keeps context", () => {
+  assert.deepStrictEqual(deleteCompletionDecision(2, "log", true), {
+    callSuccess: false,
+    reloadType: ""
+  });
+});
+
+// ── edit load handling ──
+test("editLoadResult success JSON object", () => {
+  assert.deepStrictEqual(editLoadResult(0, '{"id":"1","title":"A"}', ""), {
+    ok: true,
+    data: {id: "1", title: "A"},
+    error: ""
+  });
+});
+test("editLoadResult empty stdout", () => {
+  assert.deepStrictEqual(editLoadResult(0, "", ""), {
+    ok: false,
+    data: null,
+    error: "加载失败：未取到数据"
+  });
+});
+test("editLoadResult invalid JSON", () => {
+  const result = editLoadResult(0, "not json", "");
+  assert.strictEqual(result.ok, false);
+  assert.strictEqual(result.data, null);
+  assert.match(result.error, /^解析失败：/);
+});
+test("editLoadResult non-zero exit prefers stderr", () => {
+  assert.deepStrictEqual(editLoadResult(1, "", "not found\ntrace"), {
+    ok: false,
+    data: null,
+    error: "加载失败：not found"
+  });
+});
+test("editLoadResult non-zero exit falls back to exit code", () => {
+  assert.deepStrictEqual(editLoadResult(127, "", ""), {
+    ok: false,
+    data: null,
+    error: "加载失败（退出码 127）"
+  });
+});
 
 // ── All done ──
 console.log(`✓ All ${passed} tests passed`);

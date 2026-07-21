@@ -349,9 +349,10 @@ Popup {
                 }
                 onClicked: {
                     if (!itemData.id) { panel.showToast("⚠️ 该项没有 id，无法删除"); return; }
-                    panel.deleteItem(root.type, itemData.id);
+                    panel.deleteItem(root.type, itemData.id, function() {
+                        root.close();
+                    });
                     panel.showToast("🗑️ 删除中...");
-                    root.close();
                 }
             }
 
@@ -386,12 +387,14 @@ Popup {
             id: actionStderr
         }
         onExited: function(exitCode, exitStatus) {
+            var t = root.pendingReload;
+            root.pendingReload = "";
             if (exitCode !== 0) {
                 var detail = actionStderr.text.trim();
                 panel.showToast("❌ 操作失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
+                return;
             }
-            var t = root.pendingReload;
-            root.pendingReload = "";
+
             root.close();
             if (t) panel.reloadData(t);
         }

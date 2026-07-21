@@ -34,10 +34,7 @@ PanelWindow {
 
     // ── 公开刷新接口（供子组件调用） ──
     function reloadData(type) {
-        if (type === "todo")      { dataFetcher.fetchTodos(); }
-        else if (type === "idea") { dataFetcher.fetchIdeas(); }
-        else if (type === "log")  { dataFetcher.fetchLogs(); }
-        else                      { dataFetcher.reload(); }  // fallback: all
+        dataFetcher.reload(type);
     }
 
     // ── 通用 toast 反馈（供子组件调用） ──
@@ -80,9 +77,11 @@ PanelWindow {
     }
 
     // ── 删除项（vim dd 用） ──
-    function deleteItem(type, id) {
+    function deleteItem(type, id, onSuccess) {
         if (!id) { showToast("⚠️ 该项没有 id，无法删除"); return; }
+        if (deleteProc.running) { showToast("⏳ 删除中..."); return; }
         deleteProc.pendingType = type;
+        deleteProc.onSuccess = onSuccess || null;
         deleteProc.command = ["starcatch", type, "delete", id];
         deleteProc.running = true;
     }
@@ -363,48 +362,174 @@ PanelWindow {
                 property var logs: []
                 property bool loading: false
                 property int pendingCount: 0
+                property string queuedReloadType: ""
                 // 三个独立 error 属性，避免并行 Process 互相覆盖；
                 // 聚合 error 只读属性供 UI 显示（优先 todo → idea → log）。
                 property string todoError: ""
                 property string ideaError: ""
                 property string logError: ""
-                readonly property string error: todoError || ideaError || logError
+                property string timeoutError: ""
+                readonly property string error: todoError || ideaError || logError || timeoutError
 
-                function reload() {
+                function reload(type) {
+                    var normalized = normalizeReloadType(type);
+                    if (pendingCount > 0) {
+                        queueReload(normalized);
+                        return;
+                    }
+                    startReload(normalized);
+                }
+
+                function startReload(type) {
                     loading = true;
-                    todoError = "";
-                    ideaError = "";
-                    logError = "";
-                    pendingCount = 3;
-                    fetchTodos();
-                    fetchIdeas();
-                    fetchLogs();
-                    fetchTimeout.start();
+                    timeoutError = "";
+                    pendingCount = 0;
+
+                    if (type === "todo") {
+                        todoError = "";
+                        fetchTodos();
+                    } else if (type === "idea") {
+                        ideaError = "";
+                        fetchIdeas();
+                    } else if (type === "log") {
+                        logError = "";
+                        fetchLogs();
+                    } else {
+                        todoError = "";
+                        ideaError = "";
+                        logError = "";
+                        fetchTodos();
+                        fetchIdeas();
+                        fetchLogs();
+                    }
+
+                    if (pendingCount > 0) {
+                        fetchTimeout.restart();
+                    } else {
+                        loading = false;
+                        fetchTimeout.stop();
+                    }
+                }
+
+                function normalizeReloadType(type) {
+                    if (type === "todo" || type === "idea" || type === "log") return type;
+                    return "all";
+                }
+
+                function queueReload(type) {
+                    var next = normalizeReloadType(type);
+                    if (queuedReloadType === "") {
+                        queuedReloadType = next;
+                    } else if (queuedReloadType !== next) {
+                        queuedReloadType = "all";
+                    }
+                }
+
+                function drainQueuedReload() {
+                    if (queuedReloadType === "") return;
+                    var next = queuedReloadType;
+                    queuedReloadType = "";
+                    startReload(next);
                 }
 
                 function fetchTodos() {
+                    pendingCount++;
                     todoProcess.running = true;
                 }
 
                 function fetchIdeas() {
+                    pendingCount++;
                     ideaProcess.running = true;
                 }
 
                 function fetchLogs() {
+                    pendingCount++;
                     logProcess.running = true;
+                }
+
+                function firstLine(text) {
+                    var trimmed = (text || "").trim();
+                    return trimmed ? trimmed.split("\n")[0] : "";
+                }
+
+                function parseListJson(text) {
+                    var value = JSON.parse((text || "").trim());
+                    if (!Array.isArray(value)) {
+                        throw new Error("expected JSON array");
+                    }
+                    return value;
+                }
+
+                function emptyMessage(type) {
+                    if (type === "todo") return "待办数据为空，请确认 Starcatch 可用";
+                    if (type === "idea") return "灵感数据为空，请确认 Starcatch 可用";
+                    return "日志数据为空，请确认 Starcatch 可用";
+                }
+
+                function failureMessage(type, exitCode, stderrText) {
+                    var detail = firstLine(stderrText);
+                    var prefix = type === "todo" ? "待办获取失败"
+                        : type === "idea" ? "灵感获取失败"
+                        : "日志获取失败";
+                    return prefix + (detail ? "：" + detail : "（退出码 " + exitCode + "）");
+                }
+
+                function parseFailureMessage(type, err) {
+                    var prefix = type === "todo" ? "待办解析失败"
+                        : type === "idea" ? "灵感解析失败"
+                        : "日志解析失败";
+                    return prefix + "：" + err.message;
+                }
+
+                function setFetchError(type, msg) {
+                    if (type === "todo") todoError = msg;
+                    else if (type === "idea") ideaError = msg;
+                    else logError = msg;
+                }
+
+                function setFetchItems(type, value) {
+                    if (type === "todo") todos = value;
+                    else if (type === "idea") ideas = value;
+                    else logs = value;
+                }
+
+                function handleFetchDone(type, exitCode, stdoutText, stderrText) {
+                    var out = (stdoutText || "").trim();
+
+                    if (exitCode !== 0) {
+                        setFetchError(type, failureMessage(type, exitCode, stderrText));
+                        checkDone();
+                        return;
+                    }
+
+                    if (!out) {
+                        setFetchError(type, emptyMessage(type));
+                        setFetchItems(type, []);
+                        checkDone();
+                        return;
+                    }
+
+                    try {
+                        var raw = parseListJson(out);
+                        if (type === "todo") setFetchItems(type, mapTodos(raw));
+                        else if (type === "idea") setFetchItems(type, mapIdeas(raw));
+                        else setFetchItems(type, mapLogs(raw));
+                        setFetchError(type, "");
+                    } catch (e) {
+                        setFetchError(type, parseFailureMessage(type, e));
+                    }
+
+                    checkDone();
                 }
 
                 Process {
                     id: todoProcess
                     command: ["starcatch", "--json", "todo", "list", "--all"]
                     running: false
-                    stdout: StdioCollector {
-                        onStreamFinished: {
-                            if (!this.text.trim()) dataFetcher.todoError = "待办数据为空，请确认 Starcatch 可用";
-                            else dataFetcher.todoError = "";
-                            dataFetcher.todos = dataFetcher.parseTodos(this.text);
-                            dataFetcher.checkDone();
-                        }
+                    stdout: StdioCollector { id: todoStdout }
+                    stderr: StdioCollector { id: todoStderr }
+                    onExited: function(exitCode, exitStatus) {
+                        dataFetcher.handleFetchDone("todo", exitCode, todoStdout.text, todoStderr.text);
                     }
                 }
 
@@ -412,13 +537,10 @@ PanelWindow {
                     id: ideaProcess
                     command: ["starcatch", "--json", "idea", "list", "-d", "7"]
                     running: false
-                    stdout: StdioCollector {
-                        onStreamFinished: {
-                            if (!this.text.trim()) dataFetcher.ideaError = "灵感数据为空，请确认 Starcatch 可用";
-                            else dataFetcher.ideaError = "";
-                            dataFetcher.ideas = dataFetcher.parseIdeas(this.text);
-                            dataFetcher.checkDone();
-                        }
+                    stdout: StdioCollector { id: ideaStdout }
+                    stderr: StdioCollector { id: ideaStderr }
+                    onExited: function(exitCode, exitStatus) {
+                        dataFetcher.handleFetchDone("idea", exitCode, ideaStdout.text, ideaStderr.text);
                     }
                 }
 
@@ -426,13 +548,10 @@ PanelWindow {
                     id: logProcess
                     command: ["starcatch", "--json", "log", "list", "-d", "3"]
                     running: false
-                    stdout: StdioCollector {
-                        onStreamFinished: {
-                            if (!this.text.trim()) dataFetcher.logError = "日志数据为空，请确认 Starcatch 可用";
-                            else dataFetcher.logError = "";
-                            dataFetcher.logs = dataFetcher.parseLogs(this.text);
-                            dataFetcher.checkDone();
-                        }
+                    stdout: StdioCollector { id: logStdout }
+                    stderr: StdioCollector { id: logStderr }
+                    onExited: function(exitCode, exitStatus) {
+                        dataFetcher.handleFetchDone("log", exitCode, logStdout.text, logStderr.text);
                     }
                 }
 
@@ -442,6 +561,7 @@ PanelWindow {
                         pendingCount = 0;
                         loading = false;
                         fetchTimeout.stop();
+                        drainQueuedReload();
                     }
                 }
 
@@ -452,8 +572,7 @@ PanelWindow {
                     onTriggered: {
                         if (dataFetcher.loading) {
                             dataFetcher.loading = false;
-                            dataFetcher.pendingCount = 0;
-                            dataFetcher.error = "数据获取超时，请检查 Starcatch 是否运行";
+                            dataFetcher.timeoutError = "数据获取超时，请检查 Starcatch 是否运行";
                         }
                     }
                 }
@@ -481,8 +600,7 @@ PanelWindow {
                 }
 
                 // ── Todo JSON 映射 ──
-                function parseTodos(text) {
-                    var raw = parseJson(text);
+                function mapTodos(raw) {
                     var priorityIcon = { "P0": "🔴", "P1": "🟡", "P2": "🟢", "P3": "⚪" };
                     var statusIcon = { "Pending": "⬜", "Done": "✅", "Archived": "📦" };
                     return raw.map(function(item) {
@@ -499,9 +617,12 @@ PanelWindow {
                     });
                 }
 
+                function parseTodos(text) {
+                    return mapTodos(parseJson(text));
+                }
+
                 // ── Idea JSON 映射 ──
-                function parseIdeas(text) {
-                    var raw = parseJson(text);
+                function mapIdeas(raw) {
                     return raw.map(function(item) {
                         var time = formatDate(item.created_at);
                         var subtitle = item.source ? "from: " + item.source + " · " + time : time;
@@ -516,9 +637,12 @@ PanelWindow {
                     });
                 }
 
+                function parseIdeas(text) {
+                    return mapIdeas(parseJson(text));
+                }
+
                 // ── Log JSON 映射 ──
-                function parseLogs(text) {
-                    var raw = parseJson(text);
+                function mapLogs(raw) {
                     return raw.map(function(item) {
                         var time = formatDate(item.created_at);
                         return {
@@ -529,6 +653,10 @@ PanelWindow {
                             time: time
                         };
                     });
+                }
+
+                function parseLogs(text) {
+                    return mapLogs(parseJson(text));
                 }
             }
 
@@ -655,17 +783,23 @@ PanelWindow {
         id: deleteProc
         running: false
         property string pendingType: ""
+        property var onSuccess: null
         stdout: StdioCollector {}
         stderr: StdioCollector { id: deleteStderr }
         onExited: function(exitCode, exitStatus) {
+            var t = pendingType;
+            var cb = onSuccess;
+            pendingType = "";
+            onSuccess = null;
+
             if (exitCode !== 0) {
                 var detail = deleteStderr.text.trim();
                 showToast("❌ 删除失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
-            } else {
-                showToast("🗑️  已删除");
+                return;
             }
-            var t = pendingType;
-            pendingType = "";
+
+            showToast("🗑️  已删除");
+            if (typeof cb === "function") cb();
             if (t) reloadData(t);
         }
     }

@@ -113,11 +113,15 @@ Item {
 
     readonly property string homeDir: Quickshell.env("HOME") || ""
 
+    function shellQuote(s) {
+        return "'" + s.replace(/'/g, "'\\''") + "'";
+    }
+
     Process {
         id: themeReader
         command: ["bash", "-c",
-            "cat " + homeDir + "/.config/star-panel/theme.json 2>/dev/null" +
-            " || cat " + homeDir + "/.config/hypr/scripts/quickshell/qs_colors.json 2>/dev/null" +
+            "cat " + shellQuote(homeDir + "/.config/star-panel/theme.json") + " 2>/dev/null" +
+            " || cat " + shellQuote(homeDir + "/.config/hypr/scripts/quickshell/qs_colors.json") + " 2>/dev/null" +
             " || echo '{}'"]
         running: false  // 由 initFromSettings() 触发，避免启动竞态
         stdout: StdioCollector {
@@ -147,7 +151,9 @@ Item {
                     if (c.yellow !== undefined) root.yellow = c.yellow;
                     if (c.maroon !== undefined) root.maroon = c.maroon;
                     if (c.teal !== undefined) root.teal = c.teal;
-                } catch(e) {}
+                } catch(e) {
+                    console.warn("star-panel: failed to parse theme json:", e.message);
+                }
             }
         }
     }

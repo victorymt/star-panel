@@ -119,34 +119,29 @@ Popup {
     Process {
         id: loadProc
         running: false
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var txt = this.text.trim();
-                if (!txt) {
-                    root.loading = false;
-                    root.loadError = "加载失败：未取到数据";
-                    return;
-                }
-                try {
-                    root.fillForm(JSON.parse(txt));
-                    root.loadError = "";
-                } catch (e) {
-                    root.loadError = "解析失败：" + e.message;
-                }
-                root.loading = false;
-            }
-        }
-        stderr: StdioCollector {
-            id: loadStderr
-            onStreamFinished: {
-                if (this.text.trim()) {
-                    root.loading = false;
-                    root.loadError = "加载失败：" + this.text.trim().split("\n")[0];
-                }
-            }
-        }
+        stdout: StdioCollector { id: loadStdout }
+        stderr: StdioCollector { id: loadStderr }
         onExited: function(exitCode, exitStatus) {
-            if (exitCode !== 0) root.loading = false;
+            root.loading = false;
+
+            if (exitCode !== 0) {
+                var detail = loadStderr.text.trim();
+                root.loadError = "加载失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）");
+                return;
+            }
+
+            var txt = loadStdout.text.trim();
+            if (!txt) {
+                root.loadError = "加载失败：未取到数据";
+                return;
+            }
+
+            try {
+                root.fillForm(JSON.parse(txt));
+                root.loadError = "";
+            } catch (e) {
+                root.loadError = "解析失败：" + e.message;
+            }
         }
     }
 
@@ -158,14 +153,15 @@ Popup {
         stdout: StdioCollector {}
         stderr: StdioCollector { id: saveStderr }
         onExited: function(exitCode, exitStatus) {
+            var t = saveProc.pendingReload;
+            saveProc.pendingReload = "";
             if (exitCode !== 0) {
                 var detail = saveStderr.text.trim();
                 panel.showToast("❌ 保存失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
-            } else {
-                panel.showToast("✅ 已更新");
+                return;
             }
-            var t = saveProc.pendingReload;
-            saveProc.pendingReload = "";
+
+            panel.showToast("✅ 已更新");
             root.close();
             if (t) panel.reloadData(t);
         }

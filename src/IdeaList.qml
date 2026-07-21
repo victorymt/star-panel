@@ -225,7 +225,7 @@ Item {
             } else if (event.key === Qt.Key_G && (event.modifiers & Qt.ShiftModifier)) {
                 if (model.length > 0) {
                     currentIndex = model.length - 1;
-                    positionViewAtIndex(currentIndex, ListView.END);
+                    positionViewAtIndex(currentIndex, ListView.End);
                     root._trackCurrent();
                 }
                 event.accepted = true;

@@ -49,7 +49,7 @@ Item {
     // ── 从文件加载持久化设置 ──
     Process {
         id: settingsLoader
-        command: ["bash", "-c", "cat " + config.settingsFile + " 2>/dev/null || echo '{}'"]
+        command: ["bash", "-c", "cat " + config.shellQuote(config.settingsFile) + " 2>/dev/null || echo '{}'"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -65,7 +65,9 @@ Item {
                     if (typeof data.animationDuration === "number") config.animationDuration = data.animationDuration;
                     if (typeof data.themeName  === "string") config.themeName  = data.themeName;
                     if (typeof data.todoFilter === "string") config.todoFilter = data.todoFilter;
-                } catch (e) {}
+                } catch (e) {
+                    console.warn("star-panel: failed to parse settings.json:", e.message);
+                }
                 // 设置加载完成后统一初始化主题，避免与 Colors.qml 的 matugen 读取竞态
                 if (typeof theme !== "undefined") theme.initFromSettings();
             }
@@ -95,11 +97,11 @@ Item {
                 todoFilter: todoFilter
             };
             var json = JSON.stringify(data, null, 2);
-            var safeDir = settingsDir.replace(/'/g, "'\\''");
-            var safeFile = settingsFile.replace(/'/g, "'\\''");
             Quickshell.execDetached([
                 "bash", "-c",
-                "mkdir -p '" + safeDir + "' && printf '%s\\n' " + shellQuote(json) + " > '" + safeFile + "'"
+                "mkdir -p " + shellQuote(settingsDir)
+                    + " && printf '%s\\n' " + shellQuote(json)
+                    + " > " + shellQuote(settingsFile)
             ]);
         }
     }

@@ -295,6 +295,10 @@ Item {
                     }
                     var inputText = textInput.text.trim();
                     if (inputText === "") return;
+                    if (pipeProc.running) {
+                        panel.showToast("⏳ 捕获中...");
+                        return;
+                    }
 
                     if (inputText[0] === ":") {
                         executeCommand(inputText.split(" ")[0]);
@@ -305,6 +309,7 @@ Item {
                     var safeText = "'" + inputText.replace(/'/g, "'\\''") + "'";
 
                     pipeProc.pendingType = type;
+                    pipeProc.pendingText = inputText;
                     pipeProc.command = ["bash", "-c", "printf '%s\\n' " + safeText + " | starcatch pipe " + type];
                     pipeProc.running = true;
 
@@ -322,6 +327,13 @@ Item {
                     { type: "log",  label: "📓 日志", icon: "📓" }
                 ]
                 property int currentIndex: 0
+
+                function indexFromType(type) {
+                    for (var i = 0; i < typeModels.length; i++) {
+                        if (typeModels[i].type === type) return i;
+                    }
+                    return 0;
+                }
 
                 contentItem: Text {
                     text: typeSelector.typeModels[typeSelector.currentIndex].label
@@ -349,19 +361,23 @@ Item {
             id: pipeProc
             running: false
             property string pendingType: ""
+            property string pendingText: ""
             stdout: StdioCollector {}
             stderr: StdioCollector { id: pipeStderr }
             onExited: function(exitCode, exitStatus) {
                 if (exitCode !== 0) {
                     var detail = pipeStderr.text.trim();
                     panel.showToast("❌ 捕获失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
+                    textInput.text = pendingText;
+                    typeSelector.currentIndex = typeSelector.indexFromType(pendingType);
+                    root.cmdMode = false;
+                    textInput.forceActiveFocus();
                 } else {
                     panel.showToast("✨ 已捕获");
+                    if (pendingType) panel.reloadData(pendingType);
                 }
-                if (pendingType) {
-                    panel.reloadData(pendingType);
-                    pendingType = "";
-                }
+                pendingType = "";
+                pendingText = "";
             }
         }
     }
