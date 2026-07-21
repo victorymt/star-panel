@@ -41,8 +41,8 @@ qs -c star-panel ipc call panel toggle
 | 🪟 右侧滑出 | 动画 slide-in/out，点击外部 / Escape 关闭 |
 | 📋 待办列表 | 优先级颜色指示（🔴🟡🟢⚪）、到期日高亮、标签显示 |
 | 💭 灵感列表 | 标题 + 内容摘要 |
-| 📓 日志列表 | 多行内容展示 |
-| 🚿 快速输入 | 类型切换（📋 待办 / 💭 灵感 / 📓 日志），Enter 提交 |
+| 📓 日志列表 | 多行内容展示，显示日志图片数量 |
+| 🚿 快速输入 | 类型切换（📋 待办 / 💭 灵感 / 📓 日志），日志可附加本地图片路径 |
 | 🎨 主题切换 | 5 种主题可选：Auto（Matugen 壁纸取色）/ Mocha / Frappé / Macchiato / Latte |
 | ⚙ 设置面板 | ComboBox 主题选择、面板宽度调节、6 级字体大小独立调整 |
 | 💾 配置持久化 | 所有设置保存到 `~/.config/star-panel/settings.json`，重启保留 |
@@ -61,6 +61,12 @@ star-panel 面向 Vim / Emacs 用户做了完整键盘路径：
 | Emacs 编辑 | 搜索、快速输入、编辑弹窗支持 `Ctrl+A/E/B/F/K/U` |
 
 完整快捷键说明见 [doc/README.md#43-快捷键](./doc/README.md#43-快捷键)。
+
+## 📎 日志图片
+
+切到 📓 日志输入时，底部会出现图片路径输入栏；多个路径用逗号分隔。带图片提交会调用 `starcatch log add --image <path>`，Starcatch 会复制到自己的 image-cache 后再保存。编辑日志时可修改图片路径列表；清空后保存会移除该日志的图片。
+
+需要 Starcatch CLI 支持 `log add/edit --image` 与 `--clear-images`。
 
 ## 🎨 主题系统
 

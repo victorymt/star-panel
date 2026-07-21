@@ -90,7 +90,8 @@ Item {
         var q = searchText.trim().toLowerCase();
         return all.filter(function(item) {
             return (item.content && item.content.toLowerCase().indexOf(q) >= 0)
-                || (item.title && item.title.toLowerCase().indexOf(q) >= 0);
+                || (item.title && item.title.toLowerCase().indexOf(q) >= 0)
+                || ((item.images || []).join(" ").toLowerCase().indexOf(q) >= 0);
         });
     }
 
@@ -361,7 +362,11 @@ Item {
                 }
 
                 Text {
-                    text: modelData.title || ""
+                    text: {
+                        var title = modelData.title || "";
+                        var count = (modelData.images || []).length;
+                        return count > 0 ? title + " · 📎 " + count : title;
+                    }
                     color: colors ? colors.overlay0 : "#6c7086"
                     font.pixelSize: cfg.fontTiny
                     elide: Text.ElideRight

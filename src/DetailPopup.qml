@@ -11,6 +11,18 @@ Popup {
     property var itemData: ({})
     property string pendingReload: ""  // type to reload after action succeeds
 
+    function imageSource(path) {
+        if (!path) return "";
+        if (path.indexOf("file://") === 0) return path;
+        return "file://" + path;
+    }
+
+    function imageName(path) {
+        if (!path) return "";
+        var parts = path.split("/");
+        return parts.length > 0 ? parts[parts.length - 1] : path;
+    }
+
     modal: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
     dim: true
@@ -210,6 +222,63 @@ Popup {
                 color: theme.overlay0
                 font.pixelSize: cfg.fontSmall
                 Layout.fillWidth: true
+            }
+
+            ColumnLayout {
+                spacing: 6
+                Layout.fillWidth: true
+                visible: itemData.images !== undefined && itemData.images !== null && itemData.images.length > 0
+
+                Text {
+                    text: "图片 · " + ((itemData.images || []).length)
+                    color: theme.overlay0
+                    font.pixelSize: cfg.fontTiny
+                    Layout.fillWidth: true
+                }
+
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Repeater {
+                        model: itemData.images || []
+
+                        delegate: Rectangle {
+                            width: 84
+                            height: 106
+                            radius: 8
+                            color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
+                            border.width: 1
+                            border.color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+
+                            Image {
+                                id: thumb
+                                anchors.top: parent.top
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.margins: 6
+                                height: 72
+                                source: root.imageSource(modelData)
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                cache: true
+                                clip: true
+                            }
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                anchors.margins: 6
+                                text: root.imageName(modelData)
+                                color: theme.overlay0
+                                font.pixelSize: cfg.fontTiny
+                                elide: Text.ElideMiddle
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+                        }
+                    }
+                }
             }
         }
 

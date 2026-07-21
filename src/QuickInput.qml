@@ -10,9 +10,10 @@ import Quickshell.Io
 Item {
     id: root
 
-    implicitHeight: 40
-    property alias inputActive: textInput.activeFocus
+    implicitHeight: logImageInputVisible ? 72 : 40
+    property bool inputActive: textInput.activeFocus || logImageField.activeFocus
     property bool cmdMode: false
+    readonly property bool logImageInputVisible: !cmdMode && typeSelector.typeModels[typeSelector.currentIndex].type === "log"
 
     // 供列表的 vim `o` 调用：聚焦输入框（进入 insert mode）
     function focusInput() { textInput.forceActiveFocus(); }
@@ -21,6 +22,71 @@ Item {
     function enterCommandMode() {
         textInput.text = ":";
         textInput.forceActiveFocus();
+    }
+
+    function splitImagePaths(text) {
+        var raw = (text || "").split(/[\n,]/);
+        var paths = [];
+        for (var i = 0; i < raw.length; i++) {
+            var path = raw[i].trim();
+            if (path) paths.push(path);
+        }
+        return paths;
+    }
+
+    function parseLogInput(raw) {
+        var text = (raw || "").trim();
+        var sep = text.indexOf("|");
+        if (sep >= 0) {
+            var meta = parseLogTokens(text.slice(sep + 1), false);
+            meta.content = text.slice(0, sep).trim();
+            return meta;
+        }
+        return parseLogTokens(text, true);
+    }
+
+    function parseLogTokens(raw, collectContent) {
+        var tokens = (raw || "").trim().split(/\s+/);
+        var result = { content: collectContent ? "" : "", mood: "", tags: [], project: "" };
+        var contentParts = [];
+        for (var i = 0; i < tokens.length; i++) {
+            var token = tokens[i];
+            if (!token) continue;
+            if (token.indexOf("mood:") === 0 || token.indexOf("mood：") === 0) {
+                var mood = token.slice(5).trim();
+                if (!mood && i + 1 < tokens.length) mood = tokens[++i];
+                result.mood = mood;
+            } else if (token.indexOf("project:") === 0 || token.indexOf("project：") === 0) {
+                var project = token.slice(8).trim();
+                if (!project && i + 1 < tokens.length) project = tokens[++i];
+                result.project = project;
+            } else if (token[0] === "#") {
+                var tag = token.slice(1).replace(/[，,。.!?！？；;：:]+$/, "").trim();
+                if (tag) result.tags.push(tag);
+            } else if (collectContent) {
+                contentParts.push(token);
+            }
+        }
+        if (collectContent) result.content = contentParts.join(" ");
+        return result;
+    }
+
+    function buildLogAddCommand(inputText, imageText) {
+        var images = splitImagePaths(imageText);
+        if (images.length === 0) return null;
+
+        var parsed = parseLogInput(inputText);
+        var content = (parsed.content || "").trim();
+        if (!content) return { error: "内容不能为空" };
+
+        var cmd = ["starcatch", "log", "add", content];
+        if (parsed.mood) cmd.push("-m", parsed.mood);
+        if (parsed.tags.length > 0) cmd.push("-t", parsed.tags.join(","));
+        if (parsed.project) cmd.push("-P", parsed.project);
+        for (var i = 0; i < images.length; i++) {
+            cmd.push("--image", images[i]);
+        }
+        return { command: cmd };
     }
 
     // 面板打开时延迟聚焦，配合滑入动画
@@ -45,7 +111,7 @@ Item {
         radius: 10
         color: theme ? Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.6) : "#313244"
         border.width: 1
-        border.color: textInput.activeFocus
+        border.color: root.inputActive
             ? (theme ? Qt.rgba(theme.blue.r, theme.blue.g, theme.blue.b, 0.4) : Qt.rgba(0.54, 0.71, 0.98, 0.4))
             : (theme ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.3) : Qt.rgba(0.27, 0.34, 0.38, 0.3))
 
@@ -162,19 +228,24 @@ Item {
             }
         }
 
-        RowLayout {
+        ColumnLayout {
             anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 6
-            spacing: 6
+            spacing: 0
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 40
+                Layout.leftMargin: 10
+                Layout.rightMargin: 6
+                spacing: 6
 
             // 模式徽章（vim 风格 INSERT/NORMAL/CMD）
             Text {
                 text: root.cmdMode ? "⌨ CMD"
-                    : (textInput.activeFocus ? "✎ INSERT" : "▸ NORMAL")
+                    : (root.inputActive ? "✎ INSERT" : "▸ NORMAL")
                 color: root.cmdMode ? (theme ? theme.blue : "#89b4fa")
-                    : (textInput.activeFocus ? (theme ? theme.green : "#a6e3a1")
-                                             : (theme ? theme.overlay0 : "#6c7086"))
+                    : (root.inputActive ? (theme ? theme.green : "#a6e3a1")
+                                        : (theme ? theme.overlay0 : "#6c7086"))
                 font.pixelSize: cfg.fontTiny
                 font.bold: true
                 Layout.preferredWidth: 64
@@ -317,7 +388,7 @@ Item {
                     }
                 }
 
-                Keys.onReturnPressed: {
+                function submit() {
                     if (root.cmdMode) {
                         if (cmdPanel.candidates.length === 0) {
                             panel.showToast("⚠️ 未知命令 · :help 查看全部");
@@ -341,16 +412,31 @@ Item {
                     }
 
                     var type = typeSelector.typeModels[typeSelector.currentIndex].type;
-                    var safeText = "'" + inputText.replace(/'/g, "'\\''") + "'";
 
                     pipeProc.pendingType = type;
                     pipeProc.pendingText = inputText;
-                    pipeProc.command = ["bash", "-c", "printf '%s\\n' " + safeText + " | starcatch pipe " + type];
+                    pipeProc.pendingImages = type === "log" ? logImageField.text : "";
+
+                    var logCommand = type === "log" ? root.buildLogAddCommand(inputText, logImageField.text) : null;
+                    if (logCommand && logCommand.error) {
+                        panel.showToast("⚠️ " + logCommand.error);
+                        return;
+                    }
+
+                    if (logCommand && logCommand.command) {
+                        pipeProc.command = logCommand.command;
+                    } else {
+                        var safeText = "'" + inputText.replace(/'/g, "'\\''") + "'";
+                        pipeProc.command = ["bash", "-c", "printf '%s\\n' " + safeText + " | starcatch pipe " + type];
+                    }
                     pipeProc.running = true;
 
                     textInput.text = "";
+                    if (type === "log") logImageField.text = "";
                     textInput.forceActiveFocus();
                 }
+
+                Keys.onReturnPressed: submit()
             }
 
             // 类型切换按钮
@@ -388,6 +474,75 @@ Item {
                         : "transparent"
                 }
             }
+
+            }
+
+            RowLayout {
+                id: imageRow
+                Layout.fillWidth: true
+                Layout.preferredHeight: 28
+                Layout.leftMargin: 10
+                Layout.rightMargin: 6
+                spacing: 6
+                visible: root.logImageInputVisible
+
+                Text {
+                    text: "📎"
+                    color: theme ? theme.overlay0 : "#6c7086"
+                    font.pixelSize: cfg.fontSmall
+                    Layout.preferredWidth: 64
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                TextField {
+                    id: logImageField
+                    Layout.fillWidth: true
+                    color: theme ? theme.text : "#cdd6f4"
+                    placeholderTextColor: theme ? theme.overlay0 : "#6c7086"
+                    placeholderText: "图片路径，逗号或换行分隔"
+                    font.pixelSize: cfg.fontSmall
+                    verticalAlignment: Text.AlignVCenter
+                    background: null
+                    onAccepted: textInput.submit()
+                    Keys.onPressed: function(event) {
+                        if (event.key === Qt.Key_Escape) {
+                            if (logImageField.text !== "") {
+                                logImageField.text = "";
+                            } else {
+                                textInput.forceActiveFocus();
+                            }
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Tab) {
+                            textInput.forceActiveFocus();
+                            event.accepted = true;
+                        } else {
+                            panel.handleEmacsEdit(logImageField, event);
+                        }
+                    }
+                }
+
+                Button {
+                    flat: true
+                    visible: logImageField.text !== ""
+                    Layout.preferredWidth: 24
+                    Layout.preferredHeight: 24
+                    onClicked: logImageField.text = ""
+                    contentItem: Text {
+                        text: "✕"
+                        color: theme ? theme.overlay0 : "#6c7086"
+                        font.pixelSize: cfg.fontTiny
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        radius: 6
+                        color: parent.hovered && theme
+                            ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
+                            : "transparent"
+                    }
+                }
+            }
         }
 
         // pipe 写入 Process：写入完成后再刷新对应列表，避免读到写入前的旧数据；
@@ -397,6 +552,7 @@ Item {
             running: false
             property string pendingType: ""
             property string pendingText: ""
+            property string pendingImages: ""
             stdout: StdioCollector {}
             stderr: StdioCollector { id: pipeStderr }
             onExited: function(exitCode, exitStatus) {
@@ -404,6 +560,7 @@ Item {
                     var detail = pipeStderr.text.trim();
                     panel.showToast("❌ 捕获失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
                     textInput.text = pendingText;
+                    logImageField.text = pendingImages;
                     typeSelector.currentIndex = typeSelector.indexFromType(pendingType);
                     root.cmdMode = false;
                     textInput.forceActiveFocus();
@@ -413,6 +570,7 @@ Item {
                 }
                 pendingType = "";
                 pendingText = "";
+                pendingImages = "";
             }
         }
     }

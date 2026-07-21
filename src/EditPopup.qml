@@ -16,6 +16,7 @@ Popup {
     property string priorityValue: "P2"   // todo 优先级单选状态
     property bool loading: false
     property string loadError: ""
+    property string originalLogImagesText: ""
 
     modal: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -48,10 +49,25 @@ Popup {
         root.formData = ({});
         root.priorityValue = "P2";
         root.loadError = "";
+        root.originalLogImagesText = "";
         root.loading = true;
         loadProc.command = ["starcatch", "--json", t, "show", id];
         loadProc.running = true;
         root.open();
+    }
+
+    function splitImagePaths(text) {
+        var raw = (text || "").split(/[\n,]/);
+        var paths = [];
+        for (var i = 0; i < raw.length; i++) {
+            var path = raw[i].trim();
+            if (path) paths.push(path);
+        }
+        return paths;
+    }
+
+    function normalizeImageText(text) {
+        return splitImagePaths(text).join("\n");
     }
 
     // 回填表单（按类型把 show 的 JSON 映射到各字段）
@@ -75,6 +91,8 @@ Popup {
             moodField.text = raw.mood || "";
             logTagsField.text = (raw.tags || []).join(", ");
             logProjectField.text = raw.project || "";
+            logImagesText.text = (raw.images || []).join("\n");
+            root.originalLogImagesText = logImagesText.text;
         }
     }
 
@@ -109,6 +127,18 @@ Popup {
                    "-m", moodField.text.trim(),
                    "-t", logTagsField.text.trim(),
                    "-P", logProjectField.text.trim()];
+            var originalImages = root.normalizeImageText(root.originalLogImagesText);
+            var currentImages = root.normalizeImageText(logImagesText.text);
+            if (currentImages !== originalImages) {
+                var imagePaths = root.splitImagePaths(logImagesText.text);
+                if (imagePaths.length === 0) {
+                    cmd.push("--clear-images");
+                } else {
+                    for (var i = 0; i < imagePaths.length; i++) {
+                        cmd.push("--image", imagePaths[i]);
+                    }
+                }
+            }
         }
         saveProc.pendingReload = root.type;
         saveProc.command = cmd;
@@ -573,6 +603,36 @@ Popup {
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
                 Keys.onPressed: function(event) { panel.handleEmacsEdit(logProjectField, event); }
+                background: Rectangle {
+                    radius: 6
+                    color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
+                    border.width: parent.activeFocus ? 1 : 0
+                    border.color: Qt.rgba(theme.blue.r, theme.blue.g, theme.blue.b, 0.5)
+                }
+            }
+
+            Text {
+                text: "图片路径"
+                color: theme.overlay0
+                font.pixelSize: cfg.fontTiny
+                Layout.fillWidth: true
+            }
+            TextArea {
+                id: logImagesText
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(96, Math.max(44, implicitHeight))
+                color: theme.text
+                placeholderTextColor: theme.overlay0
+                placeholderText: "逗号或换行分隔 · 留空清除"
+                font.pixelSize: cfg.fontTiny
+                wrapMode: Text.WrapAnywhere
+                Keys.onPressed: function(event) {
+                    if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                        root.save(); event.accepted = true;
+                    } else {
+                        panel.handleEmacsEdit(logImagesText, event);
+                    }
+                }
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)

@@ -703,6 +703,7 @@ PanelWindow {
                             title: time + (item.mood ? " · " + item.mood : ""),
                             content: item.content,
                             tags: item.tags || [],
+                            images: item.images || [],
                             time: time
                         };
                     });

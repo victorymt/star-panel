@@ -6,6 +6,10 @@ const {
   parseIdeas,
   parseLogs,
   shellQuote,
+  splitImagePaths,
+  parseLogInput,
+  buildLogAddCommand,
+  editLogImageArgs,
   firstLine,
   parseListJson,
   listFetchResult,
@@ -91,7 +95,7 @@ test("parseIdeas with source", () => {
 // ── parseLogs ──
 test("parseLogs with mood", () => {
   const logInput = JSON.stringify([
-    { id: "1", content: "Today was good", mood: "😊", created_at: "2024-06-27T20:00:00Z", tags: ["life"] },
+    { id: "1", content: "Today was good", mood: "😊", created_at: "2024-06-27T20:00:00Z", tags: ["life"], images: ["/tmp/starcatch/image-cache/a.png"] },
     { id: "2", content: "No mood entry", created_at: "2024-06-26T12:00:00Z" }
   ]);
   const logs = parseLogs(logInput);
@@ -99,8 +103,10 @@ test("parseLogs with mood", () => {
   assert.strictEqual(logs[0].content, "Today was good");
   assert.strictEqual(logs[0].title, "06-27 20:00 · 😊");
   assert.deepStrictEqual(logs[0].tags, ["life"]);
+  assert.deepStrictEqual(logs[0].images, ["/tmp/starcatch/image-cache/a.png"]);
   assert.strictEqual(logs[1].title, "06-26 12:00");
   assert.strictEqual(logs[1].tags.length, 0);
+  assert.deepStrictEqual(logs[1].images, []);
 });
 
 // ── filterByStatus ──
@@ -158,6 +164,64 @@ test("empty string", () => assert.strictEqual(shellQuote(""), "''"));
 test("multiple single quotes", () => assert.strictEqual(shellQuote("a'b'c"), "'a'\\''b'\\''c'"));
 test("path with spaces", () => assert.strictEqual(shellQuote("/home/me/My Config/settings.json"), "'/home/me/My Config/settings.json'"));
 test("path with single quote", () => assert.strictEqual(shellQuote("/home/o'hara/settings.json"), "'/home/o'\\''hara/settings.json'"));
+
+// ── log images ──
+test("splitImagePaths supports comma and newline", () => {
+  assert.deepStrictEqual(
+    splitImagePaths(" /tmp/a.png, /tmp/b.jpg\n/tmp/c.webp ,, "),
+    ["/tmp/a.png", "/tmp/b.jpg", "/tmp/c.webp"]
+  );
+  assert.deepStrictEqual(splitImagePaths(""), []);
+});
+test("parseLogInput keeps quick log metadata out of content", () => {
+  assert.deepStrictEqual(parseLogInput("shipped v2 mood:happy project:backend #work"), {
+    content: "shipped v2",
+    mood: "happy",
+    tags: ["work"],
+    project: "backend"
+  });
+});
+test("parseLogInput supports separator metadata", () => {
+  assert.deepStrictEqual(parseLogInput("shipped v2 | mood:happy #work project:backend"), {
+    content: "shipped v2",
+    mood: "happy",
+    tags: ["work"],
+    project: "backend"
+  });
+});
+test("buildLogAddCommand returns null without images", () => {
+  assert.strictEqual(buildLogAddCommand("plain log", ""), null);
+});
+test("buildLogAddCommand includes repeated image args", () => {
+  assert.deepStrictEqual(
+    buildLogAddCommand("shipped v2 mood:happy project:backend #work", "/tmp/a.png,/tmp/b.jpg"),
+    {
+      command: [
+        "starcatch", "log", "add", "shipped v2",
+        "-m", "happy",
+        "-t", "work",
+        "-P", "backend",
+        "--image", "/tmp/a.png",
+        "--image", "/tmp/b.jpg"
+      ]
+    }
+  );
+});
+test("buildLogAddCommand rejects empty image log content", () => {
+  assert.deepStrictEqual(buildLogAddCommand("mood:happy #work", "/tmp/a.png"), { error: "内容不能为空" });
+});
+test("editLogImageArgs preserves unchanged image paths", () => {
+  assert.deepStrictEqual(editLogImageArgs("/tmp/a.png\n/tmp/b.jpg", " /tmp/a.png, /tmp/b.jpg "), []);
+});
+test("editLogImageArgs clears images when emptied", () => {
+  assert.deepStrictEqual(editLogImageArgs("/tmp/a.png", " "), ["--clear-images"]);
+});
+test("editLogImageArgs replaces image paths", () => {
+  assert.deepStrictEqual(
+    editLogImageArgs("/tmp/a.png", "/tmp/b.jpg\n/tmp/c.webp"),
+    ["--image", "/tmp/b.jpg", "--image", "/tmp/c.webp"]
+  );
+});
 
 // ── fetch result handling ──
 test("firstLine trims and takes stderr first line", () => {

@@ -92,6 +92,7 @@ sudo pacman -S quickshell qt6-declarative qt6-shadertools
 
 # 需要 starcatch CLI 已安装
 which starcatch  # 确认可用
+starcatch log add --help | grep -- --image  # 日志图片需要新版 CLI
 ```
 
 ### 3.2 项目结构
@@ -250,6 +251,7 @@ qs -c star-panel ipc call panel hide
 - **Tab 切换**：在待办/灵感/日志之间切换
 - **快速输入**：在底部输入框输入内容，Enter 提交到 Starcatch
   - 点击类型按钮可在 `📋待办 → 💭灵感 → 📓日志` 之间循环
+  - 日志类型会显示图片路径输入栏，多个路径用逗号分隔
 
 ---
 
@@ -293,7 +295,7 @@ CLI 输出通过 `--json` 选项返回 JSON，面板用 `JSON.parse()` 解析:
 ```
 starcatch --json todo list --all  →  [{ id, title, priority, status, due_date, tags, ... }, ...]
 starcatch --json idea list -d 7   →  [{ id, title, content, source, tags, ... }, ...]
-starcatch --json log list -d 3    →  [{ id, content, mood, tags, ... }, ...]
+starcatch --json log list -d 3    →  [{ id, content, mood, tags, images, ... }, ...]
 ```
 
 对应解析函数: `parseTodos()` / `parseIdeas()` / `parseLogs()`（`Panel.qml`）。
@@ -306,17 +308,19 @@ starcatch --json log list -d 3    →  [{ id, content, mood, tags, ... }, ...]
 ### LogList.qml
 
 日志列表，从 `starcatch log list -d 3` 输出解析。
-显示标题 + 内容（最多 2 行，自动换行）。
+显示标题 + 内容（最多 2 行，自动换行），并在存在图片时显示附件数量。
+详情弹窗会读取 Starcatch 缓存后的 `images` 路径并显示缩略图与文件名；编辑日志时可替换图片路径，清空图片路径后保存会调用 `--clear-images`。
 
 ### QuickInput.qml
 
-快速输入组件。将文本通过 pipe 模式提交到 Starcatch。
+快速输入组件。无图片时将文本通过 pipe 模式提交到 Starcatch；日志附带图片路径时改用 `starcatch log add` 并追加 `--image` 参数。
 
 ```bash
 # 内部执行的命令示例
 echo "买个奶茶" | starcatch pipe todo
 echo "写个新项目" | starcatch pipe idea
 echo "今天好累" | starcatch pipe log
+starcatch log add "今天好累" --image /tmp/a.png --image /tmp/b.jpg
 ```
 
 三种类型循环切换: `📋待办 → 💭灵感 → 📓日志`
