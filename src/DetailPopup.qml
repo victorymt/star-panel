@@ -10,6 +10,8 @@ Popup {
     property string type: "todo"
     property var itemData: ({})
     property string pendingReload: ""  // type to reload after action succeeds
+    property int previewImageIndex: -1
+    property var previewImages: []
 
     function imageSource(path) {
         if (!path) return "";
@@ -21,6 +23,37 @@ Popup {
         if (!path) return "";
         var parts = path.split("/");
         return parts.length > 0 ? parts[parts.length - 1] : path;
+    }
+
+    function openImagePreview(index) {
+        var images = itemData.images || [];
+        if (index < 0 || index >= images.length) return;
+        previewImages = images;
+        previewImageIndex = index;
+        imagePreview.open();
+    }
+
+    function currentPreviewPath() {
+        if (previewImageIndex < 0 || previewImageIndex >= previewImages.length) return "";
+        return previewImages[previewImageIndex];
+    }
+
+    function currentPreviewSource() {
+        return imageSource(currentPreviewPath());
+    }
+
+    function currentPreviewName() {
+        return imageName(currentPreviewPath());
+    }
+
+    function nextPreviewImage() {
+        if (previewImages.length <= 1) return;
+        previewImageIndex = (previewImageIndex + 1) % previewImages.length;
+    }
+
+    function prevPreviewImage() {
+        if (previewImages.length <= 1) return;
+        previewImageIndex = (previewImageIndex - 1 + previewImages.length) % previewImages.length;
     }
 
     modal: true
@@ -56,7 +89,8 @@ Popup {
         // Escape 关闭弹窗（contentItem 拿到焦点后才生效，见 root.onOpened）
         Keys.onPressed: function(event) {
             if (event.key === Qt.Key_Escape) {
-                root.close();
+                if (imagePreview.visible) imagePreview.close();
+                else root.close();
                 event.accepted = true;
             }
         }
@@ -244,12 +278,17 @@ Popup {
                         model: itemData.images || []
 
                         delegate: Rectangle {
+                            property int imageIndex: index
                             width: 84
                             height: 106
                             radius: 8
-                            color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
+                            color: thumbMouse.containsMouse
+                                ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.55)
+                                : Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
                             border.width: 1
-                            border.color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                            border.color: thumbMouse.containsMouse
+                                ? Qt.rgba(theme.blue.r, theme.blue.g, theme.blue.b, 0.55)
+                                : Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
 
                             Image {
                                 id: thumb
@@ -275,6 +314,14 @@ Popup {
                                 font.pixelSize: cfg.fontTiny
                                 elide: Text.ElideMiddle
                                 horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            MouseArea {
+                                id: thumbMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.openImagePreview(parent.imageIndex)
                             }
                         }
                     }
@@ -441,6 +488,162 @@ Popup {
                         : "transparent"
                 }
                 onClicked: root.close()
+            }
+        }
+    }
+
+    Popup {
+        id: imagePreview
+        parent: root.contentItem
+        x: 0
+        y: 0
+        width: root.width
+        height: root.height
+        modal: true
+        focus: true
+        padding: 0
+        closePolicy: Popup.CloseOnEscape
+
+        onOpened: contentItem.forceActiveFocus()
+        onClosed: {
+            root.previewImageIndex = -1;
+            root.contentItem.forceActiveFocus();
+        }
+
+        background: Rectangle {
+            color: Qt.rgba(theme.crust.r, theme.crust.g, theme.crust.b, 0.88)
+            radius: 12
+        }
+
+        contentItem: Item {
+            focus: true
+
+            Keys.onPressed: function(event) {
+                if (event.key === Qt.Key_Escape) {
+                    imagePreview.close();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
+                    root.nextPreviewImage();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
+                    root.prevPreviewImage();
+                    event.accepted = true;
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: imagePreview.close()
+            }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 10
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Text {
+                        text: root.currentPreviewName()
+                        color: theme.text
+                        font.pixelSize: cfg.fontSmall
+                        elide: Text.ElideMiddle
+                        Layout.fillWidth: true
+                    }
+
+                    Text {
+                        text: root.previewImages.length > 1 ? ((root.previewImageIndex + 1) + " / " + root.previewImages.length) : ""
+                        color: theme.overlay0
+                        font.pixelSize: cfg.fontTiny
+                        visible: root.previewImages.length > 1
+                    }
+
+                    Button {
+                        flat: true
+                        Layout.preferredWidth: 28
+                        Layout.preferredHeight: 28
+                        onClicked: imagePreview.close()
+                        contentItem: Text {
+                            text: "✕"
+                            color: theme.overlay0
+                            font.pixelSize: cfg.fontSmall
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        background: Rectangle {
+                            radius: 6
+                            color: parent.hovered
+                                ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                                : "transparent"
+                        }
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: mouse.accepted = true
+                    }
+
+                    Image {
+                        anchors.fill: parent
+                        source: root.currentPreviewSource()
+                        fillMode: Image.PreserveAspectFit
+                        asynchronous: true
+                        cache: true
+                    }
+
+                    Button {
+                        visible: root.previewImages.length > 1
+                        flat: true
+                        width: 36
+                        height: 48
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        onClicked: root.prevPreviewImage()
+                        contentItem: Text {
+                            text: "‹"
+                            color: theme.text
+                            font.pixelSize: cfg.fontXl
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        background: Rectangle {
+                            radius: 6
+                            color: parent.hovered
+                                ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.55)
+                                : Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.35)
+                        }
+                    }
+
+                    Button {
+                        visible: root.previewImages.length > 1
+                        flat: true
+                        width: 36
+                        height: 48
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        onClicked: root.nextPreviewImage()
+                        contentItem: Text {
+                            text: "›"
+                            color: theme.text
+                            font.pixelSize: cfg.fontXl
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        background: Rectangle {
+                            radius: 6
+                            color: parent.hovered
+                                ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.55)
+                                : Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.35)
+                        }
+                    }
+                }
             }
         }
     }
