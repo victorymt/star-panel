@@ -130,6 +130,7 @@ Popup {
                     { key: "q", desc: "关弹窗或关面板" },
                     { key: "dd", desc: "删除当前项（再按 d 确认）" },
                     { key: "e", desc: "编辑当前项" },
+                    { key: "y", desc: "复制当前项到剪切板（灵感：标题+内容 / 日志：正文）" },
                     { key: "Enter", desc: "查看详情" },
                     { key: "1 / 2 / 3", desc: "切 Todo 过滤器：待办 / 已完成 / 已归档" },
                     { key: "Space / a", desc: "Todo 完成/恢复 / 归档" },
@@ -148,6 +149,7 @@ Popup {
                     { key: ":open", desc: "查看当前项" },
                     { key: ":e / :edit", desc: "编辑当前项" },
                     { key: ":d / :delete", desc: "删除当前项" },
+                    { key: ":y / :copy / :yank", desc: "复制当前项到剪切板" },
                     { key: ":done / :archive / :reopen", desc: "待办状态操作" },
                     { key: ":help", desc: "显示本帮助" }
                 ]

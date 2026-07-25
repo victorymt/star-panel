@@ -94,6 +94,46 @@ PanelWindow {
         currentList().deleteCurrentItem();
     }
 
+    // ── 复制到剪切板（vim y / :y） ──
+    function copyText(text) {
+        var t = (text || "").toString();
+        if (!t) {
+            showToast("📭 没有可复制的内容");
+            return false;
+        }
+        Quickshell.clipboardText = t;
+        showToast("📋 已复制到剪切板");
+        return true;
+    }
+
+    function formatCopyText(type, item) {
+        if (!item) return "";
+        if (type === "idea") {
+            var title = (item.title || "").toString().trim();
+            var content = (item.content || "").toString().trim();
+            if (title && content && content !== title) return title + "\n" + content;
+            return title || content;
+        }
+        if (type === "log") {
+            return (item.content || "").toString().trim();
+        }
+        // todo：标题 + 描述
+        var t = (item.title || "").toString().trim();
+        var d = (item.description || "").toString().trim();
+        if (t && d) return t + "\n" + d;
+        return t || d;
+    }
+
+    function copyItem(type, item) {
+        return copyText(formatCopyText(type, item));
+    }
+
+    function copyCurrentItem() {
+        var list = currentList();
+        if (list && list.copyCurrentItem) list.copyCurrentItem();
+        else showToast("📭 列表为空");
+    }
+
     function runCurrentTodoAction(cmd) {
         if (tabBar.currentIndex !== 0) {
             showToast("⚠️ 该命令只适用于待办");

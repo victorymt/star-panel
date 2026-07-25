@@ -56,6 +56,10 @@ Popup {
         previewImageIndex = (previewImageIndex - 1 + previewImages.length) % previewImages.length;
     }
 
+    function copyItemText() {
+        panel.copyItem(root.type, root.itemData);
+    }
+
     modal: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
     dim: true
@@ -91,6 +95,10 @@ Popup {
             if (event.key === Qt.Key_Escape) {
                 if (imagePreview.visible) imagePreview.close();
                 else root.close();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Y && !event.modifiers) {
+                // y — 复制正文到剪切板（vim yank）
+                root.copyItemText();
                 event.accepted = true;
             }
         }
@@ -417,11 +425,30 @@ Popup {
             }
         }
 
-        // ── Idea/Log 操作按钮（编辑 + 删除 + 关闭） ──
+        // ── Idea/Log 操作按钮（复制 + 编辑 + 删除 + 关闭） ──
         RowLayout {
             spacing: 8
             visible: type !== "todo"
             Layout.fillWidth: true
+
+            Button {
+                Layout.fillWidth: true
+                flat: true
+                contentItem: Text {
+                    text: "📋 复制"
+                    color: theme.green
+                    font.pixelSize: cfg.fontSmall
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                        : "transparent"
+                }
+                onClicked: root.copyItemText()
+            }
 
             Button {
                 Layout.fillWidth: true

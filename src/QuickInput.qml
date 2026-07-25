@@ -138,6 +138,9 @@ Item {
                 { cmd: ":edit",  desc: "编辑当前项" },
                 { cmd: ":d",     desc: "删除当前项" },
                 { cmd: ":delete", desc: "删除当前项" },
+                { cmd: ":y",     desc: "复制当前项到剪切板" },
+                { cmd: ":copy",  desc: "复制当前项到剪切板" },
+                { cmd: ":yank",  desc: "复制当前项到剪切板" },
                 { cmd: ":done",  desc: "标记当前待办完成" },
                 { cmd: ":archive", desc: "归档当前待办" },
                 { cmd: ":reopen", desc: "恢复当前待办" },
@@ -355,6 +358,11 @@ Item {
                         case ":d":
                         case ":delete":
                             panel.deleteCurrentItem();
+                            break;
+                        case ":y":
+                        case ":copy":
+                        case ":yank":
+                            panel.copyCurrentItem();
                             break;
                         case ":done":
                             panel.runCurrentTodoAction("done");

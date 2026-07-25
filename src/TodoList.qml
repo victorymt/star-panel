@@ -59,6 +59,12 @@ Item {
         }
     }
 
+    function copyCurrentItem() {
+        var item = currentItem();
+        if (!item) { panel.showToast("📭 列表为空"); return; }
+        panel.copyItem(root.itemType, item);
+    }
+
     function runTodoAction(cmd) {
         var item = currentItem();
         if (!item || !item.id) { panel.showToast("📭 列表为空"); return; }
@@ -455,6 +461,10 @@ Item {
             } else if (event.key === Qt.Key_E && !event.modifiers) {
                 // e — 编辑当前项（vim 风格）
                 root.editCurrentItem();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Y && !event.modifiers) {
+                // y — 复制当前项到剪切板（vim yank）
+                root.copyCurrentItem();
                 event.accepted = true;
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 root.openCurrentItem();

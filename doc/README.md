@@ -195,6 +195,7 @@ qs -c star-panel ipc call panel hide
 | 关弹窗/关面板 | `q` | vim `:q` 等价 |
 | 删除当前项 | `dd` | 2.5s 内按两次 d 确认 |
 | 编辑当前项 | `e` | 打开编辑弹窗 |
+| 复制当前项 | `y` | 复制到剪切板（灵感：标题+内容；日志：正文；待办：标题+描述）；详情弹窗内同样可用 |
 | 查看详情 | `Enter` | 打开详情弹窗 |
 | 切 Todo 过滤器 | `1` / `2` / `3` | Pending / Done / Archived（仅 TodoList） |
 | Todo 状态操作 | `Space` / `a` | 完成/恢复当前 Todo；归档当前 Todo |
@@ -234,6 +235,7 @@ qs -c star-panel ipc call panel hide
 | `:open` | 查看当前项 |
 | `:e` / `:edit` | 编辑当前项 |
 | `:d` / `:delete` | 删除当前项 |
+| `:y` / `:copy` / `:yank` | 复制当前项到剪切板 |
 | `:done` / `:archive` / `:reopen` | 当前待办状态操作 |
 | `:help` | 显示帮助弹窗 |
 
