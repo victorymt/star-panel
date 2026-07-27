@@ -459,6 +459,9 @@ Item {
                 ]
                 property int currentIndex: 0
 
+                // Tab / 点击 / :todo|:idea|:log 改类型时，主面板待办/灵感/日志跟着切
+                onCurrentIndexChanged: panel.setMainTab(currentIndex)
+
                 function indexFromType(type) {
                     for (var i = 0; i < typeModels.length; i++) {
                         if (typeModels[i].type === type) return i;

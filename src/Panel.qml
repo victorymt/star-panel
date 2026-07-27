@@ -69,6 +69,13 @@ PanelWindow {
         focusCurrentList();
     }
 
+    // 仅切换主面板 tab，不抢焦点（供快速输入 Tab 切类型时联动）
+    function setMainTab(index) {
+        if (index < 0 || index >= tabBar.tabs.length) return;
+        if (tabBar.currentIndex !== index)
+            tabBar.currentIndex = index;
+    }
+
     // ── 聚焦当前 tab 的列表（vim normal mode 入口） ──
     function focusCurrentList() {
         if (tabBar.currentIndex === 0) todoList.focusList();
