@@ -59,6 +59,7 @@ star-panel 面向 Vim / Emacs 用户做了完整键盘路径：
 | 列表操作 | `Enter` 查看，`Space` 完成/恢复 Todo，`a` 归档 Todo，`e` 编辑，`y` 复制，`dd` 删除，`r/R` 刷新当前/全部，`o` 进入快速输入，`:` 进入命令模式 |
 | 命令模式 | `:open`、`:e/:edit`、`:d/:delete`、`:y/:copy/:yank`、`:done/:archive/:reopen`、`:r/:reload`、`:help` |
 | Emacs 编辑 | 搜索、快速输入、编辑弹窗支持 `Ctrl+A/E/B/F/K/U` |
+| Esc 切英文 | 从快速输入 / 搜索 / 编辑弹窗按 `Esc` 退出时，自动把 fcitx5+rime 切到英文（`ascii_mode`） |
 
 完整快捷键说明见 [doc/README.md#43-快捷键](./doc/README.md#43-快捷键)。
 

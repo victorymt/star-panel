@@ -135,6 +135,7 @@ Item {
                         searchField.focus = false;
                         listView.forceActiveFocus();
                     }
+                    panel.switchToEnglishIme();
                     event.accepted = true;
                 } else if (panel.handleEmacsEdit(searchField, event)) {
                     return;

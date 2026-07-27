@@ -169,6 +169,16 @@ PanelWindow {
         return true;
     }
 
+    // 从编辑/输入态按 Esc 退出时，把 fcitx5+rime 切到英文（ascii_mode）。
+    // 保持 rime 引擎，与 Ctrl+Space 中英语义一致；fcitx 未运行时静默失败。
+    function switchToEnglishIme() {
+        Quickshell.execDetached([
+            "busctl", "--user", "call",
+            "org.fcitx.Fcitx5", "/rime",
+            "org.fcitx.Fcitx.Rime1", "SetAsciiMode", "b", "true"
+        ]);
+    }
+
     // ── 删除项（vim dd 用） ──
     function deleteItem(type, id, onSuccess) {
         if (!id) { showToast("⚠️ 该项没有 id，无法删除"); return; }

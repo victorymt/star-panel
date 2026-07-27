@@ -318,11 +318,13 @@ Item {
                     } else if (event.key === Qt.Key_Escape && root.cmdMode) {
                         textInput.text = "";
                         root.cmdMode = false;
+                        panel.switchToEnglishIme();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Escape && !root.cmdMode) {
                         // vim: Esc 从 insert mode 返回 normal mode（列表）
                         textInput.text = "";
                         panel.focusCurrentList();
+                        panel.switchToEnglishIme();
                         event.accepted = true;
                     } else if (panel.handleEmacsEdit(textInput, event)) {
                         return;
@@ -520,6 +522,7 @@ Item {
                             } else {
                                 textInput.forceActiveFocus();
                             }
+                            panel.switchToEnglishIme();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Tab) {
                             textInput.forceActiveFocus();

@@ -204,6 +204,7 @@ Popup {
         // Escape 关闭；Ctrl+Enter 保存（单行 TextField 不消费则传播至此）
         Keys.onPressed: function(event) {
             if (event.key === Qt.Key_Escape) {
+                panel.switchToEnglishIme();
                 root.close();
                 event.accepted = true;
             } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
