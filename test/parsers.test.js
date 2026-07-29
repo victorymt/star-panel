@@ -7,6 +7,7 @@ const {
   parseLogs,
   shellQuote,
   splitImagePaths,
+  appendImagePath,
   parseLogInput,
   buildLogAddCommand,
   editLogImageArgs,
@@ -173,6 +174,14 @@ test("splitImagePaths supports comma and newline", () => {
     ["/tmp/a.png", "/tmp/b.jpg", "/tmp/c.webp"]
   );
   assert.deepStrictEqual(splitImagePaths(""), []);
+});
+test("appendImagePath appends with normalized newlines", () => {
+  assert.strictEqual(appendImagePath(" /tmp/a.png, /tmp/b.jpg ", "/tmp/c.webp"),
+    "/tmp/a.png\n/tmp/b.jpg\n/tmp/c.webp");
+});
+test("appendImagePath does not duplicate an existing path", () => {
+  assert.strictEqual(appendImagePath("/tmp/a.png\n/tmp/b.jpg\n/tmp/a.png", "/tmp/a.png"),
+    "/tmp/a.png\n/tmp/b.jpg");
 });
 test("parseLogInput keeps quick log metadata out of content", () => {
   assert.deepStrictEqual(parseLogInput("shipped v2 mood:happy project:backend #work"), {

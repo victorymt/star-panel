@@ -73,6 +73,17 @@ function splitImagePaths(text) {
   return paths;
 }
 
+function appendImagePath(text, path) {
+  var currentPaths = splitImagePaths(text);
+  var paths = [];
+  for (var i = 0; i < currentPaths.length; i++) {
+    if (paths.indexOf(currentPaths[i]) < 0) paths.push(currentPaths[i]);
+  }
+  var next = (path || "").trim();
+  if (next && paths.indexOf(next) < 0) paths.push(next);
+  return paths.join("\n");
+}
+
 function parseLogInput(raw) {
   var text = (raw || "").trim();
   var sep = text.indexOf("|");
@@ -316,6 +327,7 @@ module.exports = {
   parseLogs,
   shellQuote,
   splitImagePaths,
+  appendImagePath,
   parseLogInput,
   buildLogAddCommand,
   editLogImageArgs,

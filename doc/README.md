@@ -88,7 +88,7 @@ STARCATCH CLI                         PANEL (QML)
 
 ```bash
 # Arch Linux
-sudo pacman -S quickshell qt6-declarative qt6-shadertools
+sudo pacman -S quickshell qt6-declarative qt6-shadertools wl-clipboard
 
 # 需要 starcatch CLI 已安装
 which starcatch  # 确认可用
@@ -223,6 +223,7 @@ qs -c star-panel ipc call panel hide
 | 执行命令 | `Enter` | 执行选中候选；带参数忽略（`:s todo` 等价 `:s`） |
 | 退出命令模式 | `Esc` | 清空输入框，焦点回列表；再按 Esc 关面板 |
 | 文本编辑 | `Ctrl+A/E/B/F/K/U` | 同上面的 emacs 输入编辑 |
+| 粘贴日志图片 | `Ctrl+V` / `Shift+Insert` | 日志输入或编辑时从剪贴板添加图片；普通文本正常粘贴 |
 
 #### 命令模式命令
 
@@ -257,6 +258,7 @@ qs -c star-panel ipc call panel hide
 - **快速输入**：在底部输入框输入内容，Enter 提交到 Starcatch
   - 点击类型按钮可在 `📋待办 → 💭灵感 → 📓日志` 之间循环
   - 日志类型会显示图片路径输入栏，多个路径用逗号分隔
+  - 日志正文和图片路径栏支持直接粘贴剪贴板图片；先写入 star-panel 暂存 cache，提交成功后清理
 
 ---
 
@@ -318,7 +320,7 @@ starcatch --json log list -d 3    →  [{ id, content, mood, tags, images, ... }
 
 ### QuickInput.qml
 
-快速输入组件。无图片时将文本通过 pipe 模式提交到 Starcatch；日志附带图片路径时改用 `starcatch log add` 并追加 `--image` 参数。
+快速输入组件。无图片时将文本通过 pipe 模式提交到 Starcatch；日志附带图片路径时改用 `starcatch log add` 并追加 `--image` 参数。`ClipboardImagePaste.qml` 调用随 `src/` 一起部署的 `clipboard-image.sh` 读取 Wayland 剪贴板图片，提交成功后由 Starcatch 持久化到 image-cache，并清理面板暂存文件。
 
 ```bash
 # 内部执行的命令示例

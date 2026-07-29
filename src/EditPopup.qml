@@ -19,7 +19,7 @@ Popup {
     property string originalLogImagesText: ""
 
     modal: true
-    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+    closePolicy: saveProc.running ? Popup.NoAutoClose : Popup.CloseOnEscape | Popup.CloseOnPressOutside
     dim: true
 
     implicitWidth: Math.min(parent ? parent.width * 0.92 : 380, 420)
@@ -33,6 +33,7 @@ Popup {
     onOpened: contentItem.forceActiveFocus()
     // 关闭后把焦点还给所属列表，保证 j/k/e 等继续可用
     onClosed: {
+        if (!saveProc.running) clipboardImagePaste.cleanupAll();
         if (parent && parent.focusList) parent.focusList();
     }
 
@@ -43,7 +44,16 @@ Popup {
         border.color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
     }
 
+    ClipboardImagePaste {
+        id: clipboardImagePaste
+        toastTarget: panel
+        onImageCaptured: function(path) {
+            logImagesText.text = clipboardImagePaste.appendPath(logImagesText.text, path);
+        }
+    }
+
     function openEdit(t, id) {
+        clipboardImagePaste.cleanupAll();
         root.type = t;
         root.itemId = id;
         root.formData = ({});
@@ -192,6 +202,7 @@ Popup {
             }
 
             panel.showToast("✅ 已更新");
+            clipboardImagePaste.cleanupAll();
             root.close();
             if (t) panel.reloadData(t);
         }
@@ -204,6 +215,11 @@ Popup {
         // Escape 关闭；Ctrl+Enter 保存（单行 TextField 不消费则传播至此）
         Keys.onPressed: function(event) {
             if (event.key === Qt.Key_Escape) {
+                if (saveProc.running) {
+                    panel.showToast("⏳ 正在保存...");
+                    event.accepted = true;
+                    return;
+                }
                 panel.switchToEnglishIme();
                 root.close();
                 event.accepted = true;
@@ -231,6 +247,7 @@ Popup {
 
             Button {
                 flat: true
+                enabled: !saveProc.running
                 onClicked: root.close()
                 contentItem: Text {
                     text: "✕"
@@ -547,7 +564,10 @@ Popup {
                     border.color: Qt.rgba(theme.blue.r, theme.blue.g, theme.blue.b, 0.5)
                 }
                 Keys.onPressed: function(event) {
-                    if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                    if (clipboardImagePaste.isPasteShortcut(event)) {
+                        clipboardImagePaste.requestPaste(logContentField, true);
+                        event.accepted = true;
+                    } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
                         root.save(); event.accepted = true;
                     } else {
                         panel.handleEmacsEdit(logContentField, event);
@@ -624,11 +644,14 @@ Popup {
                 Layout.preferredHeight: Math.min(96, Math.max(44, implicitHeight))
                 color: theme.text
                 placeholderTextColor: theme.overlay0
-                placeholderText: "逗号或换行分隔 · 留空清除"
+                placeholderText: "路径或 Ctrl+V 粘贴图片 · 留空清除"
                 font.pixelSize: cfg.fontTiny
                 wrapMode: Text.WrapAnywhere
                 Keys.onPressed: function(event) {
-                    if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                    if (clipboardImagePaste.isPasteShortcut(event)) {
+                        clipboardImagePaste.requestPaste(logImagesText, true);
+                        event.accepted = true;
+                    } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
                         root.save(); event.accepted = true;
                     } else {
                         panel.handleEmacsEdit(logImagesText, event);

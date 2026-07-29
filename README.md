@@ -65,9 +65,11 @@ star-panel 面向 Vim / Emacs 用户做了完整键盘路径：
 
 ## 📎 日志图片
 
-切到 📓 日志输入时，底部会出现图片路径输入栏；多个路径用逗号分隔。带图片提交会调用 `starcatch log add --image <path>`，Starcatch 会复制到自己的 image-cache 后再保存。编辑日志时可修改图片路径列表；清空后保存会移除该日志的图片。
+切到 📓 日志输入时，底部会出现图片路径输入栏；多个路径用逗号分隔。在日志正文或图片路径栏按 `Ctrl+V` / `Shift+Insert` 可直接粘贴剪贴板图片，图片会先暂存到 star-panel cache，提交后由 Starcatch 复制到自己的 image-cache。普通文本剪贴板仍按原行为粘贴。
 
-需要 Starcatch CLI 支持 `log add/edit --image` 与 `--clear-images`。
+带图片提交会调用 `starcatch log add --image <path>`。编辑日志时同样支持粘贴或修改图片路径列表；清空后保存会移除该日志的图片。
+
+需要 `wl-clipboard`（提供 `wl-paste`），以及支持 `log add/edit --image` 与 `--clear-images` 的 Starcatch CLI。
 
 ## 🎨 主题系统
 
@@ -120,6 +122,6 @@ output_path = "~/.config/star-panel/theme.json"
 
 ---
 
-> 🎯 需要 [Starcatch](https://github.com/your/starcatch) CLI + [Quickshell](https://github.com/Quickshell/Quickshell) ≥ 0.3.0
+> 🎯 需要 [Starcatch](https://github.com/your/starcatch) CLI + [Quickshell](https://github.com/Quickshell/Quickshell) ≥ 0.3.0 + `wl-clipboard`
 >
 > 🌟 溯星逆流追寻星渺

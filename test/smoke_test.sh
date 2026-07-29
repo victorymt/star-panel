@@ -75,8 +75,16 @@ else
   pass "node 未安装，跳过解析器测试"
 fi
 
-# ── 6. 清理 ──
-echo "=== 6. 清理 ==="
+# ── 6. 剪贴板图片助手测试 ──
+echo "=== 6. 剪贴板图片助手测试 ==="
+if bash test/clipboard_image_test.sh 2>&1; then
+  pass "clipboard_image_test.sh 通过"
+else
+  fail "clipboard_image_test.sh 失败"
+fi
+
+# ── 7. 清理 ──
+echo "=== 7. 清理 ==="
 pkill -f "quickshell.*star-panel" 2>/dev/null || true
 
 # ── 结果 ──

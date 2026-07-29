@@ -106,6 +106,14 @@ Item {
         onTriggered: textInput.forceActiveFocus()
     }
 
+    ClipboardImagePaste {
+        id: clipboardImagePaste
+        toastTarget: panel
+        onImageCaptured: function(path) {
+            logImageField.text = clipboardImagePaste.appendPath(logImageField.text, path);
+        }
+    }
+
     Rectangle {
         anchors.fill: parent
         radius: 10
@@ -299,7 +307,10 @@ Item {
 
                 // Tab 切换类型 / 切换命令候选；vim/emacs 文本编辑绑定
                 Keys.onPressed: function(event) {
-                    if (event.key === Qt.Key_Tab) {
+                    if (clipboardImagePaste.isPasteShortcut(event)) {
+                        clipboardImagePaste.requestPaste(textInput, root.logImageInputVisible);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Tab) {
                         event.accepted = true;
                         var shift = event.modifiers & Qt.ShiftModifier;
                         if (root.cmdMode && cmdPanel.candidates.length > 0) {
@@ -513,14 +524,18 @@ Item {
                     Layout.fillWidth: true
                     color: theme ? theme.text : "#cdd6f4"
                     placeholderTextColor: theme ? theme.overlay0 : "#6c7086"
-                    placeholderText: "图片路径，逗号或换行分隔"
+                    placeholderText: "图片路径，或 Ctrl+V 粘贴图片"
                     font.pixelSize: cfg.fontSmall
                     verticalAlignment: Text.AlignVCenter
                     background: null
                     onAccepted: textInput.submit()
                     Keys.onPressed: function(event) {
-                        if (event.key === Qt.Key_Escape) {
+                        if (clipboardImagePaste.isPasteShortcut(event)) {
+                            clipboardImagePaste.requestPaste(logImageField, true);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Escape) {
                             if (logImageField.text !== "") {
+                                clipboardImagePaste.cleanupAll();
                                 logImageField.text = "";
                             } else {
                                 textInput.forceActiveFocus();
@@ -541,7 +556,10 @@ Item {
                     visible: logImageField.text !== ""
                     Layout.preferredWidth: 24
                     Layout.preferredHeight: 24
-                    onClicked: logImageField.text = ""
+                    onClicked: {
+                        clipboardImagePaste.cleanupAll();
+                        logImageField.text = "";
+                    }
                     contentItem: Text {
                         text: "✕"
                         color: theme ? theme.overlay0 : "#6c7086"
@@ -579,6 +597,7 @@ Item {
                     root.cmdMode = false;
                     textInput.forceActiveFocus();
                 } else {
+                    if (pendingType === "log") clipboardImagePaste.cleanupAll();
                     panel.showToast("✨ 已捕获");
                     if (pendingType) panel.reloadData(pendingType);
                 }
