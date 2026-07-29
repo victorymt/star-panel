@@ -39,6 +39,9 @@ Item {
     // ── 待办过滤器状态 ──
     property string todoFilter: "Pending"
 
+    // ── 日志时间范围 ──
+    property int logFilterDays: 3
+
     // ── 持久化路径 ──
     readonly property string settingsDir: homeDir + "/.config/star-panel"
     readonly property string settingsFile: settingsDir + "/settings.json"
@@ -65,6 +68,8 @@ Item {
                     if (typeof data.animationDuration === "number") config.animationDuration = data.animationDuration;
                     if (typeof data.themeName  === "string") config.themeName  = data.themeName;
                     if (typeof data.todoFilter === "string") config.todoFilter = data.todoFilter;
+                    if (typeof data.logFilterDays === "number")
+                        config.logFilterDays = config.normalizeLogFilterDays(data.logFilterDays);
                 } catch (e) {
                     console.warn("star-panel: failed to parse settings.json:", e.message);
                 }
@@ -94,7 +99,8 @@ Item {
                 fontMedium: fontMedium,
                 fontLarge: fontLarge,
                 fontXl: fontXl,
-                todoFilter: todoFilter
+                todoFilter: todoFilter,
+                logFilterDays: normalizeLogFilterDays(logFilterDays)
             };
             var json = JSON.stringify(data, null, 2);
             Quickshell.execDetached([
@@ -108,5 +114,10 @@ Item {
 
     function shellQuote(s) {
         return "'" + s.replace(/'/g, "'\\''") + "'";
+    }
+
+    function normalizeLogFilterDays(value) {
+        var days = Number(value);
+        return days === 1 || days === 3 || days === 7 || days === 30 ? days : 3;
     }
 }

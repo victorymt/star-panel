@@ -12,11 +12,16 @@ Item {
     readonly property var colors: theme
     property string searchText: ""
     property bool searchActive: searchField.activeFocus
+    property int filterDays: 3
     readonly property string itemType: "log"
+    readonly property int maxInlineImages: 3
+    readonly property int inlineThumbnailWidth: 64
+    readonly property int inlineThumbnailHeight: 48
 
     // vim gg/dd/gt 状态机
     property bool _pendingG: false
     property bool _pendingD: false
+    property bool _timeFilterReady: false
 
     // 当前高亮项 id —— 用于 model 替换后还原高亮位置
     property string currentItemId: ""
@@ -71,8 +76,17 @@ Item {
     }
 
     function movePage(direction, fraction) {
-        var rows = Math.max(1, Math.floor((listView.height / 56) * fraction));
+        var currentHeight = listView.currentItem ? listView.currentItem.height + listView.spacing : 56;
+        var rows = Math.max(1, Math.floor((listView.height / Math.max(1, currentHeight)) * fraction));
         moveByRows(direction * rows);
+    }
+
+    function inlineImages(images) {
+        return (images || []).slice(0, root.maxInlineImages);
+    }
+
+    function hiddenImageCount(images) {
+        return Math.max(0, (images || []).length - root.maxInlineImages);
     }
 
     function _trackCurrent() {
@@ -89,6 +103,38 @@ Item {
     // dd 第二次 d 的超时（2.5s 内按第二次 d 才算 dd，与 toast 时长对齐）
     Timer { id: dReset; interval: 2500; onTriggered: root._pendingD = false }
 
+    Component.onCompleted: {
+        root._timeFilterReady = true;
+        var days = cfg.normalizeLogFilterDays(cfg.logFilterDays);
+        if (root.filterDays !== days) {
+            root.filterDays = days;
+            panel.reloadData(root.itemType);
+        }
+    }
+
+    onFilterDaysChanged: {
+        var days = cfg.normalizeLogFilterDays(filterDays);
+        if (filterDays !== days) {
+            filterDays = days;
+            return;
+        }
+        if (cfg.logFilterDays !== days) {
+            cfg.logFilterDays = days;
+            cfg.saveSettings();
+            if (root._timeFilterReady) panel.reloadData(root.itemType);
+        }
+    }
+
+    Connections {
+        target: cfg
+        function onLogFilterDaysChanged() {
+            var days = cfg.normalizeLogFilterDays(cfg.logFilterDays);
+            if (root.filterDays === days) return;
+            root.filterDays = days;
+            if (root._timeFilterReady) panel.reloadData(root.itemType);
+        }
+    }
+
     // 过滤后的列表（搜索）—— 与 listView.model 同源，供空状态判断使用
     readonly property var filteredItems: {
         var all = items || [];
@@ -101,32 +147,82 @@ Item {
         });
     }
 
-    // ── 搜索框 ──
-    TextField {
-        id: searchField
+    // ── 过滤器栏（时间范围 + 搜索）──
+    ColumnLayout {
+        id: filterBar
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 28
-        placeholderText: "🔍 搜索日志..."
-        placeholderTextColor: colors ? colors.overlay0 : "#6c7086"
-        color: colors ? colors.text : "#cdd6f4"
-        font.pixelSize: cfg.fontSmall
-        verticalAlignment: Text.AlignVCenter
-        rightPadding: clearBtn.visible ? 20 : 6
-        background: Rectangle {
-            radius: 6
-            color: searchField.activeFocus
-                ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.4)
-                : Qt.rgba(colors.surface0.r, colors.surface0.g, colors.surface0.b, 0.3)
-            border.width: searchField.activeFocus ? 1 : 0
-            border.color: searchField.activeFocus
-                ? Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.3)
-                : "transparent"
-        }
-        onTextChanged: root.searchText = text
+        spacing: 4
 
-        KeyNavigation.tab: listView
+        property var filters: [
+            { label: "今天", days: 1 },
+            { label: "近 3 天", days: 3 },
+            { label: "近 7 天", days: 7 },
+            { label: "近 30 天", days: 30 }
+        ]
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 4
+
+            Repeater {
+                model: filterBar.filters
+
+                delegate: Button {
+                    required property var modelData
+                    required property int index
+
+                    flat: true
+                    onClicked: root.filterDays = modelData.days
+                    Layout.preferredWidth: implicitWidth
+
+                    contentItem: Text {
+                        text: modelData.label
+                        color: root.filterDays === modelData.days ? colors.text : colors.overlay0
+                        font.pixelSize: cfg.fontSmall
+                        font.bold: root.filterDays === modelData.days
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    background: Rectangle {
+                        radius: 6
+                        color: root.filterDays === modelData.days
+                            ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.5)
+                            : parent.hovered || parent.visualFocus
+                                ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.25)
+                                : "transparent"
+                    }
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+        }
+
+        TextField {
+            id: searchField
+            Layout.fillWidth: true
+            Layout.preferredHeight: 28
+            placeholderText: "🔍 搜索日志..."
+            placeholderTextColor: colors ? colors.overlay0 : "#6c7086"
+            color: colors ? colors.text : "#cdd6f4"
+            font.pixelSize: cfg.fontSmall
+            verticalAlignment: Text.AlignVCenter
+            rightPadding: clearBtn.visible ? 20 : 6
+            background: Rectangle {
+                radius: 6
+                color: searchField.activeFocus
+                    ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.4)
+                    : Qt.rgba(colors.surface0.r, colors.surface0.g, colors.surface0.b, 0.3)
+                border.width: searchField.activeFocus ? 1 : 0
+                border.color: searchField.activeFocus
+                    ? Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.3)
+                    : "transparent"
+            }
+            onTextChanged: root.searchText = text
+
+            KeyNavigation.tab: listView
             Keys.onPressed: function(event) {
                 if (event.key === Qt.Key_Escape) {
                     if (searchField.text !== "") {
@@ -142,25 +238,30 @@ Item {
                 }
             }
 
-        Text {
-            id: clearBtn
-            text: "✕"
-            color: colors ? colors.overlay0 : "#6c7086"
-            font.pixelSize: cfg.fontTiny
-            anchors.right: parent.right
-            anchors.rightMargin: 6
-            anchors.verticalCenter: parent.verticalCenter
-            visible: searchField.text !== ""
-            MouseArea {
-                anchors.fill: parent
-                onClicked: { searchField.text = ""; searchField.focus = false; }
+            Text {
+                id: clearBtn
+                text: "✕"
+                color: colors ? colors.overlay0 : "#6c7086"
+                font.pixelSize: cfg.fontTiny
+                anchors.right: parent.right
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                visible: searchField.text !== ""
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: { searchField.text = ""; searchField.focus = false; }
+                }
             }
         }
     }
 
     // ── 空状态 ──
     Rectangle {
-        anchors.fill: parent
+        anchors.top: filterBar.bottom
+        anchors.topMargin: 8
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
         visible: !loading && filteredItems.length === 0
         color: "transparent"
 
@@ -168,7 +269,8 @@ Item {
             anchors.centerIn: parent
             text: {
                 if (searchText.trim()) return "🔍 没有匹配的结果";
-                return "📓 暂无日志\n今天还没有记录哦~";
+                if (filterDays === 1) return "📓 今天暂无日志\n随手记下此刻吧~";
+                return "📓 近 " + filterDays + " 天暂无日志";
             }
             color: colors ? colors.overlay0 : "#6c7086"
             font.pixelSize: cfg.fontMedium
@@ -189,7 +291,7 @@ Item {
     // ── 日志列表 ──
     ListView {
         id: listView
-        anchors.top: searchField.bottom
+        anchors.top: filterBar.bottom
         anchors.topMargin: 4
         anchors.left: parent.left
         anchors.right: parent.right
@@ -345,49 +447,176 @@ Item {
             required property int index
 
             width: ListView.view.width
-            implicitHeight: Math.max(56, contentColumn.implicitHeight + 16)
+            implicitHeight: Math.max(56, itemContent.implicitHeight + 16)
             highlighted: ListView.isCurrentItem
 
-            contentItem: ColumnLayout {
-                id: contentColumn
-                spacing: 2
+            contentItem: RowLayout {
+                id: itemContent
+                spacing: 10
 
-                // vim 风格当前行指示符 ▸
-                Text {
-                    text: "▸"
-                    color: colors ? colors.blue : "#89b4fa"
-                    font.pixelSize: cfg.fontSmall
-                    font.bold: true
-                    visible: itemDel.highlighted
-                    Layout.leftMargin: 0
-                }
-
-                Text {
-                    text: modelData.content || ""
-                    color: colors ? colors.text : "#cdd6f4"
-                    font.pixelSize: cfg.fontBase
-                    elide: Text.ElideRight
+                ColumnLayout {
+                    id: contentColumn
                     Layout.fillWidth: true
-                    maximumLineCount: 2
-                    wrapMode: Text.WordWrap
-                }
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 2
 
-                Text {
-                    text: {
-                        var title = modelData.title || "";
-                        var count = (modelData.images || []).length;
-                        return count > 0 ? title + " · 📎 " + count : title;
+                    // vim 风格当前行指示符 ▸
+                    Text {
+                        text: "▸"
+                        color: colors ? colors.blue : "#89b4fa"
+                        font.pixelSize: cfg.fontSmall
+                        font.bold: true
+                        visible: itemDel.highlighted
+                        Layout.leftMargin: 0
                     }
-                    color: colors ? colors.overlay0 : "#6c7086"
-                    font.pixelSize: cfg.fontTiny
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
+
+                    Text {
+                        text: modelData.content || ""
+                        color: colors ? colors.text : "#cdd6f4"
+                        font.pixelSize: cfg.fontBase
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                        maximumLineCount: 2
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Text {
+                        text: {
+                            var title = modelData.title || "";
+                            var count = (modelData.images || []).length;
+                            return count > 0 ? title + " · 📎 " + count : title;
+                        }
+                        color: colors ? colors.overlay0 : "#6c7086"
+                        font.pixelSize: cfg.fontTiny
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+
+                    // 标签
+                    TagList {
+                        tags: modelData.tags
+                        tagColor: colors ? colors.sapphire : "#74c7ec"
+                    }
                 }
 
-                // 标签
-                TagList {
-                    tags: modelData.tags
-                    tagColor: colors ? colors.sapphire : "#74c7ec"
+                // 每条日志右侧的缩略图与条目内容等高；点击后直接进入对应大图预览。
+                Item {
+                    id: inlineThumbnailArea
+                    readonly property int visibleImageCount: Math.min(
+                        (itemDel.modelData.images || []).length,
+                        root.maxInlineImages
+                    )
+                    readonly property bool hasOverflow: (itemDel.modelData.images || []).length > root.maxInlineImages
+                    readonly property int tileCount: visibleImageCount + (hasOverflow ? 1 : 0)
+
+                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: implicitWidth
+                    Layout.minimumWidth: implicitWidth
+                    Layout.maximumWidth: implicitWidth
+                    implicitWidth: visibleImageCount * root.inlineThumbnailWidth
+                        + (hasOverflow ? 46 : 0)
+                        + Math.max(0, tileCount - 1) * inlineThumbnailRow.spacing
+                    implicitHeight: Math.max(root.inlineThumbnailHeight, contentColumn.implicitHeight)
+                    visible: (itemDel.modelData.images || []).length > 0
+
+                    Row {
+                        id: inlineThumbnailRow
+                        anchors.fill: parent
+                        spacing: 6
+
+                        Repeater {
+                            model: root.inlineImages(itemDel.modelData.images)
+
+                            delegate: Rectangle {
+                                id: thumbnailFrame
+                                required property var modelData
+                                required property int index
+
+                                width: root.inlineThumbnailWidth
+                                height: inlineThumbnailRow.height
+                                radius: 6
+                                clip: true
+                                color: colors ? colors.surface0 : "#313244"
+                                border.width: 1
+                                border.color: thumbnailMouse.containsMouse
+                                    ? (colors ? colors.blue : "#89b4fa")
+                                    : (colors ? colors.surface1 : "#45475a")
+
+                                Image {
+                                    id: thumbnailImage
+                                    anchors.fill: parent
+                                    anchors.margins: 2
+                                    source: detailPopup.imageSource(thumbnailFrame.modelData)
+                                    fillMode: Image.PreserveAspectCrop
+                                    asynchronous: true
+                                    cache: true
+                                    sourceSize.width: root.inlineThumbnailWidth * 2
+                                    sourceSize.height: thumbnailFrame.height * 2
+                                }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: thumbnailImage.status === Image.Error
+                                    text: "🖼"
+                                    color: colors ? colors.overlay0 : "#6c7086"
+                                    font.pixelSize: cfg.fontMedium
+                                }
+
+                                MouseArea {
+                                    id: thumbnailMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: function(mouse) {
+                                        listView.currentIndex = itemDel.index;
+                                        root._trackCurrent();
+                                        detailPopup.openImage(itemDel.modelData, thumbnailFrame.index);
+                                        mouse.accepted = true;
+                                    }
+                                }
+
+                                ToolTip.visible: thumbnailMouse.containsMouse
+                                ToolTip.text: detailPopup.imageName(thumbnailFrame.modelData)
+                            }
+                        }
+
+                        Rectangle {
+                            id: overflowThumbnail
+                            readonly property int hiddenCount: root.hiddenImageCount(itemDel.modelData.images)
+
+                            visible: hiddenCount > 0
+                            width: 46
+                            height: inlineThumbnailRow.height
+                            radius: 6
+                            color: overflowMouse.containsMouse
+                                ? (colors ? Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.22) : "#45475a")
+                                : (colors ? colors.surface0 : "#313244")
+                            border.width: 1
+                            border.color: colors ? colors.surface1 : "#45475a"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "+" + overflowThumbnail.hiddenCount
+                                color: colors ? colors.blue : "#89b4fa"
+                                font.pixelSize: cfg.fontSmall
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                id: overflowMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: function(mouse) {
+                                    listView.currentIndex = itemDel.index;
+                                    root._trackCurrent();
+                                    detailPopup.openImage(itemDel.modelData, root.maxInlineImages);
+                                    mouse.accepted = true;
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

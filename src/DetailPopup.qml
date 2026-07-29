@@ -12,6 +12,7 @@ Popup {
     property string pendingReload: ""  // type to reload after action succeeds
     property int previewImageIndex: -1
     property var previewImages: []
+    property bool previewOnly: false
 
     function imageSource(path) {
         if (!path) return "";
@@ -31,6 +32,17 @@ Popup {
         previewImages = images;
         previewImageIndex = index;
         imagePreview.open();
+    }
+
+    function openImage(item, index) {
+        root.type = "log";
+        root.itemData = item || ({});
+        var images = root.itemData.images || [];
+        if (index < 0 || index >= images.length) return;
+        root.previewImages = images;
+        root.previewImageIndex = index;
+        root.previewOnly = true;
+        root.open();
     }
 
     function currentPreviewPath() {
@@ -73,13 +85,17 @@ Popup {
 
     // Quickshell 下 Popup 不会自动抢焦点，CloseOnEscape 失灵；
     // 打开时把焦点交给内容，Esc 才能由 contentItem 的 Keys 处理。
-    onOpened: contentItem.forceActiveFocus()
+    onOpened: {
+        if (root.previewOnly) imagePreview.open();
+        else contentItem.forceActiveFocus();
+    }
     // 关闭后把焦点还给所属列表，保证 gt/j/k 等继续可用。
     onClosed: {
         if (parent && parent.focusList) parent.focusList();
     }
 
     background: Rectangle {
+        visible: !root.previewOnly
         radius: 12
         color: Qt.rgba(theme.base.r, theme.base.g, theme.base.b, 0.96)
         border.width: 1
@@ -534,11 +550,23 @@ Popup {
         onOpened: contentItem.forceActiveFocus()
         onClosed: {
             root.previewImageIndex = -1;
-            root.contentItem.forceActiveFocus();
+            if (root.previewOnly) {
+                Qt.callLater(function() {
+                    root.close();
+                    root.previewOnly = false;
+                });
+            } else {
+                root.contentItem.forceActiveFocus();
+            }
         }
 
         background: Rectangle {
-            color: Qt.rgba(theme.crust.r, theme.crust.g, theme.crust.b, 0.88)
+            color: Qt.rgba(
+                theme.crust.r,
+                theme.crust.g,
+                theme.crust.b,
+                root.previewOnly ? 1.0 : 0.88
+            )
             radius: 12
         }
 

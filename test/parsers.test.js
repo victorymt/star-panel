@@ -25,7 +25,11 @@ const {
   todoShortcutAction,
   emacsEditResult,
   filterByStatus,
-  filterByText
+  filterByText,
+  normalizeLogFilterDays,
+  logListCommand,
+  inlineImageSummary,
+  pageRowCount
 } = require("./parsers");
 
 let passed = 0;
@@ -423,6 +427,35 @@ test("emacsEditResult kills text", () => {
   assert.deepStrictEqual(emacsEditResult("abc", 1, "K"), { text: "a", cursor: 1 });
   assert.deepStrictEqual(emacsEditResult("ab\ncd", 1, "K"), { text: "a\ncd", cursor: 1 });
   assert.deepStrictEqual(emacsEditResult("abc", 2, "U"), { text: "", cursor: 0 });
+});
+
+test("normalizeLogFilterDays accepts supported presets", () => {
+  assert.strictEqual(normalizeLogFilterDays(1), 1);
+  assert.strictEqual(normalizeLogFilterDays(3), 3);
+  assert.strictEqual(normalizeLogFilterDays("7"), 7);
+  assert.strictEqual(normalizeLogFilterDays(30), 30);
+});
+test("normalizeLogFilterDays falls back to three days", () => {
+  assert.strictEqual(normalizeLogFilterDays(0), 3);
+  assert.strictEqual(normalizeLogFilterDays(14), 3);
+  assert.strictEqual(normalizeLogFilterDays(undefined), 3);
+});
+test("logListCommand uses the normalized time range", () => {
+  assert.deepStrictEqual(logListCommand(7), ["starcatch", "--json", "log", "list", "-d", "7"]);
+  assert.deepStrictEqual(logListCommand(99), ["starcatch", "--json", "log", "list", "-d", "3"]);
+});
+
+test("inlineImageSummary limits thumbnails and reports overflow", () => {
+  assert.deepStrictEqual(inlineImageSummary(["a", "b", "c", "d", "e"], 3), {
+    visible: ["a", "b", "c"],
+    hiddenCount: 2
+  });
+  assert.deepStrictEqual(inlineImageSummary(null, 3), { visible: [], hiddenCount: 0 });
+});
+test("pageRowCount accounts for thumbnail-expanded rows", () => {
+  assert.strictEqual(pageRowCount(600, 60, 1), 10);
+  assert.strictEqual(pageRowCount(600, 120, 1), 5);
+  assert.strictEqual(pageRowCount(600, 120, 0.5), 2);
 });
 
 // ── All done ──

@@ -41,7 +41,7 @@ qs -c star-panel ipc call panel toggle
 | 🪟 右侧滑出 | 动画 slide-in/out，点击外部 / Escape 关闭 |
 | 📋 待办列表 | 优先级颜色指示（🔴🟡🟢⚪）、到期日高亮、标签显示 |
 | 💭 灵感列表 | 标题 + 内容摘要 |
-| 📓 日志列表 | 多行内容展示，显示日志图片数量 |
+| 📓 日志列表 | 多行内容与图片缩略图，支持今天 / 近 3 天 / 近 7 天 / 近 30 天筛选 |
 | 🚿 快速输入 | 类型切换（📋 待办 / 💭 灵感 / 📓 日志），日志可附加本地图片路径 |
 | 🎨 主题切换 | 5 种主题可选：Auto（Matugen 壁纸取色）/ Mocha / Frappé / Macchiato / Latte |
 | ⚙ 设置面板 | ComboBox 主题选择、面板宽度调节、6 级字体大小独立调整 |
@@ -67,7 +67,7 @@ star-panel 面向 Vim / Emacs 用户做了完整键盘路径：
 
 切到 📓 日志输入时，底部会出现图片路径输入栏；多个路径用逗号分隔。在日志正文或图片路径栏按 `Ctrl+V` / `Shift+Insert` 可直接粘贴剪贴板图片，图片会先暂存到 star-panel cache，提交后由 Starcatch 复制到自己的 image-cache。普通文本剪贴板仍按原行为粘贴。
 
-带图片提交会调用 `starcatch log add --image <path>`。编辑日志时同样支持粘贴或修改图片路径列表；清空后保存会移除该日志的图片。
+带图片提交会调用 `starcatch log add --image <path>`。日志列表的每个条目右侧会直接显示最多 3 张与条目等高的缩略图，更多图片以 `+N` 标记；点击条目打开详情，点击缩略图则只打开对应大图。编辑日志时同样支持粘贴或修改图片路径列表；清空后保存会移除该日志的图片。
 
 需要 `wl-clipboard`（提供 `wl-paste`），以及支持 `log add/edit --image` 与 `--clear-images` 的 Starcatch CLI。
 

@@ -319,6 +319,29 @@ function filterByText(items, query) {
   });
 }
 
+function normalizeLogFilterDays(value) {
+  var days = Number(value);
+  return days === 1 || days === 3 || days === 7 || days === 30 ? days : 3;
+}
+
+function logListCommand(value) {
+  return ["starcatch", "--json", "log", "list", "-d", String(normalizeLogFilterDays(value))];
+}
+
+function inlineImageSummary(images, maxVisible) {
+  var all = Array.isArray(images) ? images : [];
+  var limit = Math.max(0, maxVisible === undefined ? 3 : maxVisible);
+  return {
+    visible: all.slice(0, limit),
+    hiddenCount: Math.max(0, all.length - limit)
+  };
+}
+
+function pageRowCount(viewHeight, currentRowHeight, fraction) {
+  var rowHeight = Math.max(1, currentRowHeight || 56);
+  return Math.max(1, Math.floor((viewHeight / rowHeight) * fraction));
+}
+
 module.exports = {
   parseJson,
   formatDate,
@@ -345,5 +368,9 @@ module.exports = {
   todoShortcutAction,
   emacsEditResult,
   filterByStatus,
-  filterByText
+  filterByText,
+  normalizeLogFilterDays,
+  logListCommand,
+  inlineImageSummary,
+  pageRowCount
 };

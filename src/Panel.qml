@@ -656,7 +656,10 @@ PanelWindow {
 
                 Process {
                     id: logProcess
-                    command: ["starcatch", "--json", "log", "list", "-d", "3"]
+                    command: [
+                        "starcatch", "--json", "log", "list", "-d",
+                        cfg.normalizeLogFilterDays(cfg.logFilterDays).toString()
+                    ]
                     running: false
                     stdout: StdioCollector { id: logStdout }
                     stderr: StdioCollector { id: logStderr }

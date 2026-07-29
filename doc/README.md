@@ -73,7 +73,7 @@ STARCATCH CLI                         PANEL (QML)
 │ idea list -d 7  │                   │ → ideas: [...]       │
 ├─────────────────┤                   ├──────────────────────┤
 │ starcatch --json│──── Process ────→ │ parseLogs()          │
-│ log list -d 3   │                   │ → logs: [...]        │
+│ log list -d N   │                   │ → logs: [...]        │
 ├─────────────────┤                   ├──────────────────────┤
 │ starcatch pipe  │←─── bash -c ──── │ QuickInput           │
 │ todo/idea/log   │   "printf ... |"  │ Enter 提交            │
@@ -302,7 +302,7 @@ CLI 输出通过 `--json` 选项返回 JSON，面板用 `JSON.parse()` 解析:
 ```
 starcatch --json todo list --all  →  [{ id, title, priority, status, due_date, tags, ... }, ...]
 starcatch --json idea list -d 7   →  [{ id, title, content, source, tags, ... }, ...]
-starcatch --json log list -d 3    →  [{ id, content, mood, tags, images, ... }, ...]
+starcatch --json log list -d N    →  [{ id, content, mood, tags, images, ... }, ...]
 ```
 
 对应解析函数: `parseTodos()` / `parseIdeas()` / `parseLogs()`（`Panel.qml`）。
@@ -314,8 +314,8 @@ starcatch --json log list -d 3    →  [{ id, content, mood, tags, images, ... }
 
 ### LogList.qml
 
-日志列表，从 `starcatch log list -d 3` 输出解析。
-显示标题 + 内容（最多 2 行，自动换行），并在存在图片时显示附件数量。
+日志列表从 `starcatch log list -d N` 输出解析，`N` 由“今天 / 近 3 天 / 近 7 天 / 近 30 天”筛选项决定，默认并持久化为 3 天。切换范围时只重新获取日志，文本搜索继续作用于当前范围。
+显示标题 + 内容（最多 2 行，自动换行），并在每个带图条目的右侧显示最多 3 张与条目等高的缩略图；更多图片以 `+N` 标记。点击条目打开详情，点击缩略图则只进入对应大图预览。
 详情弹窗会读取 Starcatch 缓存后的 `images` 路径并显示缩略图与文件名；编辑日志时可替换图片路径，清空图片路径后保存会调用 `--clear-images`。
 
 ### QuickInput.qml
@@ -349,6 +349,7 @@ Matugen 模式下通过 `Timer { interval: 3000 }` 轮询文件变化，实现�
 - 字体大小 6 级: `fontTiny/fontSmall/fontBase/fontMedium/fontLarge/fontXl`
 - `themeName`: "" (Matugen 自动) / "mocha" / "latte" / "frappe" / "macchiato"
 - `todoFilter`: "Pending" / "Done" / "Archived"
+- `logFilterDays`: 1 / 3 / 7 / 30（默认 3）
 
 > 注：`refreshInterval`（30000ms）硬编码在 `Panel.qml` 的 `autoRefreshTimer`；
 > `starcatch` 二进制路径硬编码在各 `Process.command` 数组中，非 Config 属性。
@@ -475,7 +476,7 @@ quickshell --version  # 需要 ≥ 0.3.0
 # 先确认 CLI 本身能正常工作
 starcatch todo list --all
 starcatch idea list -d 7
-starcatch log list -d 3
+starcatch log list -d 3  # 面板会按当前筛选项传入 1 / 3 / 7 / 30
 ```
 
 如果 CLI 正常但面板无数据，检查 `parseTodos()`/`parseIdeas()`/`parseLogs()` 的 JSON 字段映射是否与 CLI `--json` 输出一致。

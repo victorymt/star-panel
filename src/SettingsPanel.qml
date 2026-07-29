@@ -478,6 +478,7 @@ Popup {
                 cfg.fontXl     = cfg.defaultFontXl;
                 cfg.themeName  = "";
                 cfg.todoFilter = "Pending";
+                cfg.logFilterDays = 3;
                 cfg.saveSettings();
             }
 
