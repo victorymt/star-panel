@@ -14,6 +14,8 @@ Popup {
     property var previewImages: []
     property bool previewOnly: false
 
+    signal editRequested(string itemType, var itemId)
+
     function imageSource(path) {
         if (!path) return "";
         if (path.indexOf("file://") === 0) return path;
@@ -267,11 +269,10 @@ Popup {
             visible: type === "log"
             Layout.fillWidth: true
 
-            Text {
-                text: itemData.content || ""
+            MarkdownText {
+                markdown: itemData.content || ""
                 color: theme.text
                 font.pixelSize: cfg.fontBase
-                wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
 
@@ -486,7 +487,7 @@ Popup {
                     if (!itemData.id) { panel.showToast("⚠️ 该项没有 id，无法编辑"); return; }
                     // 关闭详情 → 打开编辑（避免两个 popup 叠加）
                     root.close();
-                    if (parent && parent.editPopup) parent.editPopup.openEdit(root.type, itemData.id);
+                    root.editRequested(root.type, itemData.id);
                 }
             }
 

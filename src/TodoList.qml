@@ -602,6 +602,11 @@ Item {
         }
     }
 
-    DetailPopup { id: detailPopup }
+    DetailPopup {
+        id: detailPopup
+        onEditRequested: function(itemType, itemId) {
+            editPopup.openEdit(itemType, itemId);
+        }
+    }
     EditPopup { id: editPopup }
 }

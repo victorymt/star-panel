@@ -548,29 +548,41 @@ Popup {
             visible: root.type === "log" && !root.loading && root.loadError === ""
 
             Text { text: "内容"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
-            TextArea {
-                id: logContentField
+            ScrollView {
+                id: logContentScroll
                 Layout.fillWidth: true
-                Layout.preferredHeight: 96
-                color: theme.text
-                placeholderTextColor: theme.overlay0
-                placeholderText: "必填"
-                font.pixelSize: cfg.fontBase
-                wrapMode: Text.Wrap
+                Layout.minimumHeight: 96
+                Layout.preferredHeight: 180
+                Layout.maximumHeight: 240
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
-                    border.width: parent.activeFocus ? 1 : 0
+                    border.width: logContentField.activeFocus ? 1 : 0
                     border.color: Qt.rgba(theme.blue.r, theme.blue.g, theme.blue.b, 0.5)
                 }
-                Keys.onPressed: function(event) {
-                    if (clipboardImagePaste.isPasteShortcut(event)) {
-                        clipboardImagePaste.requestPaste(logContentField, true);
-                        event.accepted = true;
-                    } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
-                        root.save(); event.accepted = true;
-                    } else {
-                        panel.handleEmacsEdit(logContentField, event);
+
+                TextArea {
+                    id: logContentField
+                    width: logContentScroll.availableWidth
+                    color: theme.text
+                    placeholderTextColor: theme.overlay0
+                    placeholderText: "必填"
+                    font.pixelSize: cfg.fontBase
+                    wrapMode: Text.Wrap
+                    background: null
+                    Keys.onPressed: function(event) {
+                        if (clipboardImagePaste.isPasteShortcut(event)) {
+                            clipboardImagePaste.requestPaste(logContentField, true);
+                            event.accepted = true;
+                        } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                            root.save(); event.accepted = true;
+                        } else {
+                            panel.handleEmacsEdit(logContentField, event);
+                        }
                     }
                 }
             }
