@@ -209,6 +209,23 @@ function mergeQueuedReload(current, next) {
   return current === normalized ? current : "all";
 }
 
+function retryReloadType(timeoutError, timeoutReloadType, activeType) {
+  if (timeoutError && timeoutReloadType) return normalizeReloadType(timeoutReloadType);
+  return normalizeReloadType(activeType);
+}
+
+function deleteCommandDecision(armedType, armedId, currentType, currentId) {
+  var type = currentType || "";
+  var id = currentId ? String(currentId) : "";
+  var confirmedId = armedId ? String(armedId) : "";
+
+  if (!id) return { action: "reject", type: "", id: "" };
+  if (armedType === type && confirmedId === id) {
+    return { action: "delete", type: type, id: id };
+  }
+  return { action: "arm", type: type, id: id };
+}
+
 function completionDecision(exitCode, pendingReload) {
   return {
     close: exitCode === 0,
@@ -359,6 +376,8 @@ module.exports = {
   listFetchResult,
   normalizeReloadType,
   mergeQueuedReload,
+  retryReloadType,
+  deleteCommandDecision,
   completionDecision,
   pipeCompletionDecision,
   deleteCompletionDecision,

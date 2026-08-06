@@ -50,7 +50,7 @@ ShellRoot (shell.qml)
       ├── Colors (Colors.qml)  ←── Matugen 主题色
       ├── IpcHandler           ←── IPC 控制 (toggle/show/hide)
       ├── Rectangle (背景面板)  ←── 半透明浮动卡片
-      │    ├── Header        ⭐ 星捕 + ↻ 刷新 + ✕ 关闭
+      │    ├── Header        ⭐ 星捕 + 加载状态 + ↻ 刷新 + ⚙ 设置 + ? 帮助 + ✕ 关闭
       │    ├── TabBar        📋待办 │ 💭灵感 │ 📓日志
       │    ├── StackLayout   ─── 内容区 ───
       │    │    ├── TodoList   📋 待办列表
@@ -108,7 +108,7 @@ starcatch log add --help | grep -- --image  # 日志图片需要新版 CLI
     ├── QuickInput.qml     快速输入
     ├── DetailPopup.qml    详情弹窗（todo 完成/归档等操作）
     ├── TagList.qml        标签显示组件
-    ├── SettingsPanel.qml  设置面板（主题/宽度/字体）
+    ├── SettingsPanel.qml  设置面板（主题/宽度/界面缩放）
     ├── Colors.qml         主题色（Matugen / Catppuccin 预设）
     └── Config.qml         配置 + 持久化
 ```
@@ -201,11 +201,11 @@ qs -c star-panel ipc call panel hide
 | Todo 状态操作 | `Space` / `a` | 完成/恢复当前 Todo；归档当前 Todo |
 | 关详情弹窗 | `Esc` | 焦点在列表时的兜底 |
 
-#### 输入编辑 · emacs
+#### 搜索与文本编辑 · emacs
 
 | 操作 | 触发 | 说明 |
 |------|------|------|
-| 清空 / 失焦 | `Esc` | 有内容时清空，无内容时焦点回列表；再按 Esc 关面板 |
+| 清空搜索 / 失焦 | `Esc` | 搜索框有内容时清空，无内容时焦点回列表；再按 Esc 关面板 |
 | 行首 / 行尾 | `Ctrl+A` / `Ctrl+E` | 搜索、快速输入、编辑弹窗可用 |
 | 左移 / 右移 | `Ctrl+B` / `Ctrl+F` | 搜索、快速输入、编辑弹窗可用 |
 | 删到行尾 / 清空 | `Ctrl+K` / `Ctrl+U` | 搜索、快速输入、编辑弹窗可用 |
@@ -221,7 +221,7 @@ qs -c star-panel ipc call panel hide
 | 切换命令候选 | `Tab` / `Shift+Tab` | 命令模式下正/反向循环候选 |
 | 上下选命令 | `↑` / `↓` | 命令模式下移动选中 |
 | 执行命令 | `Enter` | 执行选中候选；带参数忽略（`:s todo` 等价 `:s`） |
-| 退出命令模式 | `Esc` | 清空输入框，焦点回列表；再按 Esc 关面板 |
+| 退出输入 | `Esc` | 普通输入保留草稿，命令模式清除命令；焦点回列表，再次聚焦可继续普通输入 |
 | 文本编辑 | `Ctrl+A/E/B/F/K/U` | 同上面的 emacs 输入编辑 |
 | 粘贴日志图片 | `Ctrl+V` / `Shift+Insert` | 日志输入或编辑时从剪贴板添加图片；普通文本正常粘贴 |
 
@@ -235,7 +235,7 @@ qs -c star-panel ipc call panel hide
 | `:todo` / `:idea` / `:log` | 切换输入类型 |
 | `:open` | 查看当前项 |
 | `:e` / `:edit` | 编辑当前项 |
-| `:d` / `:delete` | 删除当前项 |
+| `:d` / `:delete` | 请求删除当前项；需对同一类型、同一 ID 再次执行才能确认 |
 | `:y` / `:copy` / `:yank` | 复制当前项到剪切板 |
 | `:done` / `:archive` / `:reopen` | 当前待办状态操作 |
 | `:help` | 显示帮助弹窗 |
@@ -252,10 +252,12 @@ qs -c star-panel ipc call panel hide
 ### 4.4 交互说明
 
 - **刷新按钮** (↻)：重新拉取 Starcatch 数据
+- **加载状态**：待办、灵感和日志独立显示加载进度；刷新期间保留已有列表，失败后可点击重试
 - **关闭按钮** (✕)：关闭面板
 - **点击外部**：点击面板右侧空白区域关闭
 - **Tab 切换**：在待办/灵感/日志之间切换
 - **快速输入**：在底部输入框输入内容，Enter 提交到 Starcatch
+  - 按 Esc 返回列表时保留未提交草稿，再次聚焦可继续输入
   - 点击类型按钮可在 `📋待办 → 💭灵感 → 📓日志` 之间循环
   - 日志类型会显示图片路径输入栏，多个路径用逗号分隔
   - 日志正文和图片路径栏支持直接粘贴剪贴板图片；先写入 star-panel 暂存 cache，提交成功后清理
@@ -274,13 +276,15 @@ qs -c star-panel ipc call panel hide
 | 高度 | 全屏 |
 | 定位 | 右侧（WlrLayer anchored） |
 | 动画 | slide-in/out 280ms OutQuint |
-| 背景 | 半透明（92% opacity）+ 圆角 16px |
+| 背景 | 半透明（97% opacity）+ 圆角 16px |
 
 **关键实现细节:**
 - 使用 `WlrLayershell.namespace: "qs-star-panel"` 标识（layer 为 `WrlLayer.Top`）
 - 动画通过 `Behavior on slideOffset` 实现
 - `visible` 条件控制: `panelVisible || slideOffset > -(panelWidth + panelMargin * 2)`
 - 面板通过 `ColumnLayout` 垂直布局: 头部 → 选项卡 → 分隔线 → 内容区 → 快速输入
+- 三类列表独立跟踪加载和错误状态；超时会取消旧进程后重试，刷新失败不会清空已有数据
+- 删除命令绑定当前类型与 ID 进行二次确认；编辑弹窗关闭前会确认是否丢弃未保存修改
 
 ### TodoList.qml
 
@@ -346,7 +350,7 @@ Matugen 模式下通过 `Timer { interval: 3000 }` 轮询文件变化，实现�
 - `panelRadius`: 16
 - `animationDuration`: 280
 - `defaultTab`: 0
-- 字体大小 6 级: `fontTiny/fontSmall/fontBase/fontMedium/fontLarge/fontXl`
+- `uiScale`: 0.8 ~ 1.6，统一调整文字与控件密度；`fontTiny` 到 `fontXl` 由该比例派生
 - `themeName`: "" (Matugen 自动) / "mocha" / "latte" / "frappe" / "macchiato"
 - `todoFilter`: "Pending" / "Done" / "Archived"
 - `logFilterDays`: 1 / 3 / 7 / 30（默认 3）

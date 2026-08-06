@@ -53,9 +53,9 @@ PanelWindow {
     function closeTopOrSelf() {
         if (helpPanel.visible)                 helpPanel.close();
         else if (settingsPanel.visible)        settingsPanel.close();
-        else if (todoList.editPopup.visible)   todoList.editPopup.close();
-        else if (ideaList.editPopup.visible)   ideaList.editPopup.close();
-        else if (logList.editPopup.visible)    logList.editPopup.close();
+        else if (todoList.editPopup.visible)   todoList.editPopup.handleEscape();
+        else if (ideaList.editPopup.visible)   ideaList.editPopup.handleEscape();
+        else if (logList.editPopup.visible)    logList.editPopup.handleEscape();
         else if (todoList.detailPopup.visible) todoList.detailPopup.close();
         else if (ideaList.detailPopup.visible) ideaList.detailPopup.close();
         else if (logList.detailPopup.visible)  logList.detailPopup.close();
@@ -97,8 +97,38 @@ PanelWindow {
         currentList().editCurrentItem();
     }
 
+    function resetCommandDeleteConfirmation() {
+        commandDeleteArmed = false;
+        commandDeleteType = "";
+        commandDeleteId = "";
+        commandDeleteReset.stop();
+    }
+
     function deleteCurrentItem() {
-        currentList().deleteCurrentItem();
+        var list = currentList();
+        var item = list.currentItem();
+        var type = list.itemType;
+        var id = item && item.id ? String(item.id) : "";
+
+        if (!id) {
+            resetCommandDeleteConfirmation();
+            list.deleteCurrentItem();
+            return;
+        }
+
+        // A second command only confirms the same item that was armed first.
+        if (!commandDeleteArmed || commandDeleteType !== type || commandDeleteId !== id) {
+            commandDeleteArmed = true;
+            commandDeleteType = type;
+            commandDeleteId = id;
+            commandDeleteReset.restart();
+            showToast("再次输入 :delete 确认删除");
+            return;
+        }
+
+        resetCommandDeleteConfirmation();
+        deleteItem(type, id);
+        showToast("🗑️ 删除中...");
     }
 
     // ── 复制到剪切板（vim y / :y） ──
@@ -221,7 +251,7 @@ PanelWindow {
         if (diff === null) return "transparent";
         if (diff < 0) return clr ? clr.red : "#f38ba8";
         if (diff < 2) return clr ? clr.peach : "#fab387";
-        return clr ? clr.overlay0 : "#6c7086";
+        return clr ? clr.overlay0 : "#a6adc8";
     }
 
     function getDueDisplay(due) {
@@ -257,6 +287,9 @@ PanelWindow {
     // ── 显隐控制 ──
     // slideOffset: 0 = 显示；panelWidth + panelMargin = 隐藏（backdrop 滑出屏幕右边）
     property bool panelVisible: false
+    property bool commandDeleteArmed: false
+    property string commandDeleteType: ""
+    property string commandDeleteId: ""
     property real slideOffset: panelWidth + panelMargin
     Behavior on slideOffset {
         NumberAnimation {
@@ -329,7 +362,7 @@ PanelWindow {
         height: parent.height - panelMargin * 2
         radius: cfg.panelRadius
 
-        color: Qt.rgba(theme.base.r, theme.base.g, theme.base.b, 0.92)
+        color: Qt.rgba(theme.base.r, theme.base.g, theme.base.b, 0.97)
         border.width: 1
         border.color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
 
@@ -353,8 +386,18 @@ PanelWindow {
 
                 Item { Layout.fillWidth: true }
 
+                BusyIndicator {
+                    visible: dataFetcher.loading
+                    running: visible
+                    Layout.preferredWidth: 18
+                    Layout.preferredHeight: 18
+                    palette { mid: theme.blue }
+                }
+
                 Button {
                     flat: true
+                    Layout.preferredWidth: cfg.iconButtonSize
+                    Layout.preferredHeight: cfg.iconButtonSize
                     onClicked: dataFetcher.reload()
                     contentItem: Text {
                         text: "↻"
@@ -369,10 +412,15 @@ PanelWindow {
                             ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.6)
                             : "transparent"
                     }
+                    ToolTip.text: dataFetcher.loading ? "正在刷新" : "刷新"
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 500
                 }
 
                 Button {
                     flat: true
+                    Layout.preferredWidth: cfg.iconButtonSize
+                    Layout.preferredHeight: cfg.iconButtonSize
                     onClicked: settingsPanel.open()
                     contentItem: Text {
                         text: "⚙"
@@ -387,10 +435,39 @@ PanelWindow {
                             ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.6)
                             : "transparent"
                     }
+                    ToolTip.text: "设置"
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 500
                 }
 
                 Button {
                     flat: true
+                    Layout.preferredWidth: cfg.iconButtonSize
+                    Layout.preferredHeight: cfg.iconButtonSize
+                    onClicked: helpPanel.open()
+                    contentItem: Text {
+                        text: "?"
+                        color: theme.subtext1
+                        font.pixelSize: cfg.fontLarge
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        radius: 6
+                        color: parent.hovered
+                            ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.6)
+                            : "transparent"
+                    }
+                    ToolTip.text: "快捷键帮助"
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 500
+                }
+
+                Button {
+                    flat: true
+                    Layout.preferredWidth: cfg.iconButtonSize
+                    Layout.preferredHeight: cfg.iconButtonSize
                     onClicked: panel.panelVisible = false
                     contentItem: Text {
                         text: "✕"
@@ -405,6 +482,9 @@ PanelWindow {
                             ? Qt.rgba(theme.red.r, theme.red.g, theme.red.b, 0.2)
                             : "transparent"
                     }
+                    ToolTip.text: "关闭"
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 500
                 }
             }
 
@@ -434,7 +514,7 @@ PanelWindow {
 
                         contentItem: Text {
                             text: modelData.label
-                            color: tabBar.currentIndex === index ? theme.text : theme.overlay0
+                            color: tabBar.currentIndex === index ? theme.text : theme.subtext1
                             font.pixelSize: cfg.fontBase
                             font.bold: tabBar.currentIndex === index
                             horizontalAlignment: Text.AlignHCenter
@@ -471,8 +551,13 @@ PanelWindow {
                 property var ideas: []
                 property var logs: []
                 property bool loading: false
+                property bool todoLoading: false
+                property bool ideaLoading: false
+                property bool logLoading: false
                 property int pendingCount: 0
                 property string queuedReloadType: ""
+                property string timeoutReloadType: ""
+                property bool abortingFetch: false
                 // 三个独立 error 属性，避免并行 Process 互相覆盖；
                 // 聚合 error 只读属性供 UI 显示（优先 todo → idea → log）。
                 property string todoError: ""
@@ -480,6 +565,12 @@ PanelWindow {
                 property string logError: ""
                 property string timeoutError: ""
                 readonly property string error: todoError || ideaError || logError || timeoutError
+                readonly property string activeError: timeoutError || (tabBar.currentIndex === 0 ? todoError
+                    : tabBar.currentIndex === 1 ? ideaError : logError)
+                readonly property string activeReloadType: timeoutError !== "" && timeoutReloadType !== ""
+                    ? timeoutReloadType
+                    : tabBar.currentIndex === 0 ? "todo"
+                        : tabBar.currentIndex === 1 ? "idea" : "log"
 
                 function reload(type) {
                     var normalized = normalizeReloadType(type);
@@ -493,7 +584,12 @@ PanelWindow {
                 function startReload(type) {
                     loading = true;
                     timeoutError = "";
+                    timeoutReloadType = type;
+                    abortingFetch = false;
                     pendingCount = 0;
+                    todoLoading = false;
+                    ideaLoading = false;
+                    logLoading = false;
 
                     if (type === "todo") {
                         todoError = "";
@@ -544,16 +640,19 @@ PanelWindow {
 
                 function fetchTodos() {
                     pendingCount++;
+                    todoLoading = true;
                     todoProcess.running = true;
                 }
 
                 function fetchIdeas() {
                     pendingCount++;
+                    ideaLoading = true;
                     ideaProcess.running = true;
                 }
 
                 function fetchLogs() {
                     pendingCount++;
+                    logLoading = true;
                     logProcess.running = true;
                 }
 
@@ -603,7 +702,21 @@ PanelWindow {
                     else logs = value;
                 }
 
+                function setTypeLoading(type, value) {
+                    if (type === "todo") todoLoading = value;
+                    else if (type === "idea") ideaLoading = value;
+                    else if (type === "log") logLoading = value;
+                }
+
                 function handleFetchDone(type, exitCode, stdoutText, stderrText) {
+                    setTypeLoading(type, false);
+
+                    if (abortingFetch) {
+                        // Ignore output from the timed-out batch; only settle its counters.
+                        checkDone();
+                        return;
+                    }
+
                     var out = (stdoutText || "").trim();
 
                     if (exitCode !== 0) {
@@ -674,6 +787,7 @@ PanelWindow {
                         pendingCount = 0;
                         loading = false;
                         fetchTimeout.stop();
+                        abortingFetch = false;
                         drainQueuedReload();
                     }
                 }
@@ -684,8 +798,20 @@ PanelWindow {
                     repeat: false
                     onTriggered: {
                         if (dataFetcher.loading) {
+                            // Snapshot the old batch before stopping it. An exit callback may
+                            // synchronously drain a queued reload and start a new process.
+                            var stopTodo = todoProcess.running;
+                            var stopIdea = ideaProcess.running;
+                            var stopLog = logProcess.running;
                             dataFetcher.loading = false;
+                            dataFetcher.abortingFetch = true;
+                            dataFetcher.todoLoading = false;
+                            dataFetcher.ideaLoading = false;
+                            dataFetcher.logLoading = false;
                             dataFetcher.timeoutError = "数据获取超时，请检查 Starcatch 是否运行";
+                            if (stopTodo) todoProcess.running = false;
+                            if (stopIdea) ideaProcess.running = false;
+                            if (stopLog) logProcess.running = false;
                         }
                     }
                 }
@@ -777,19 +903,45 @@ PanelWindow {
             // ── 错误提示 ──
             Rectangle {
                 Layout.fillWidth: true
-                visible: dataFetcher.error !== ""
-                height: visible ? errorText.implicitHeight + 12 : 0
+                visible: dataFetcher.activeError !== ""
+                Layout.preferredHeight: visible ? errorRow.implicitHeight + 12 : 0
                 radius: 6
                 color: Qt.rgba(theme.red.r, theme.red.g, theme.red.b, 0.12)
-                Text {
-                    id: errorText
+
+                RowLayout {
+                    id: errorRow
                     anchors.fill: parent
                     anchors.margins: 6
-                    text: dataFetcher.error
-                    color: theme.red
-                    font.pixelSize: cfg.fontSmall
-                    wrapMode: Text.WordWrap
-                    verticalAlignment: Text.AlignVCenter
+                    spacing: 8
+
+                    Text {
+                        id: errorText
+                        text: dataFetcher.activeError
+                        color: theme.red
+                        font.pixelSize: cfg.fontSmall
+                        wrapMode: Text.WordWrap
+                        verticalAlignment: Text.AlignVCenter
+                        Layout.fillWidth: true
+                    }
+
+                    Button {
+                        flat: true
+                        onClicked: dataFetcher.reload(dataFetcher.activeReloadType)
+                        contentItem: Text {
+                            text: "重试"
+                            color: theme.text
+                            font.pixelSize: cfg.fontSmall
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        background: Rectangle {
+                            radius: 6
+                            color: parent.hovered || parent.visualFocus
+                                ? Qt.rgba(theme.red.r, theme.red.g, theme.red.b, 0.18)
+                                : "transparent"
+                        }
+                    }
                 }
             }
 
@@ -800,9 +952,9 @@ PanelWindow {
                 Layout.fillHeight: true
                 currentIndex: tabBar.currentIndex
 
-                TodoList { id: todoList; items: dataFetcher.todos; loading: dataFetcher.loading }
-                IdeaList { id: ideaList; items: dataFetcher.ideas; loading: dataFetcher.loading }
-                LogList  { id: logList;  items: dataFetcher.logs;  loading: dataFetcher.loading }
+                TodoList { id: todoList; items: dataFetcher.todos; loading: dataFetcher.todoLoading }
+                IdeaList { id: ideaList; items: dataFetcher.ideas; loading: dataFetcher.ideaLoading }
+                LogList  { id: logList;  items: dataFetcher.logs;  loading: dataFetcher.logLoading }
             }
 
             // ── 底部快速输入 ──
@@ -882,6 +1034,13 @@ PanelWindow {
     }
 
     // ── 删除项 Process（vim dd 触发） ──
+    Timer {
+        id: commandDeleteReset
+        interval: 2500
+        repeat: false
+        onTriggered: panel.resetCommandDeleteConfirmation()
+    }
+
     Process {
         id: deleteProc
         running: false

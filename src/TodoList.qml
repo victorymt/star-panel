@@ -181,7 +181,7 @@ Item {
 
                     contentItem: Text {
                         text: modelData.label
-                        color: root.filterStatus === modelData.status ? colors.text : colors.overlay0
+                        color: root.filterStatus === modelData.status ? colors.text : colors.subtext1
                         font.pixelSize: cfg.fontSmall
                         font.bold: root.filterStatus === modelData.status
                         horizontalAlignment: Text.AlignHCenter
@@ -206,14 +206,14 @@ Item {
         TextField {
             id: searchField
             Layout.fillWidth: true
-            Layout.preferredHeight: 28
+            Layout.preferredHeight: cfg.compactControlHeight
             placeholderText: "🔍 搜索"
-            placeholderTextColor: colors ? colors.overlay0 : "#6c7086"
+            placeholderTextColor: colors ? colors.subtext1 : "#a6adc8"
             color: colors ? colors.text : "#cdd6f4"
             font.pixelSize: cfg.fontSmall
             verticalAlignment: Text.AlignVCenter
             leftPadding: 6
-            rightPadding: clearBtn.visible ? 20 : 6
+            rightPadding: clearBtn.visible ? cfg.compactControlHeight : 6
             background: Rectangle {
                 radius: 6
                 color: searchField.activeFocus
@@ -247,12 +247,15 @@ Item {
             Text {
                 id: clearBtn
                 text: "✕"
-                color: colors ? colors.overlay0 : "#6c7086"
-                font.pixelSize: cfg.fontTiny
+                color: colors ? colors.subtext1 : "#a6adc8"
+                font.pixelSize: cfg.fontSmall
+                width: cfg.compactControlHeight
+                height: parent.height
                 anchors.right: parent.right
-                anchors.rightMargin: 6
                 anchors.verticalCenter: parent.verticalCenter
                 visible: searchField.text !== ""
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
                 MouseArea {
                     anchors.fill: parent
                     onClicked: { searchField.text = ""; searchField.focus = false; }
@@ -280,7 +283,7 @@ Item {
                 if (filterStatus === "Done") return "✅ 没有已完成任务";
                 return "📦 没有已归档任务";
             }
-            color: colors ? colors.overlay0 : "#6c7086"
+            color: colors ? colors.subtext1 : "#a6adc8"
             font.pixelSize: cfg.fontMedium
             horizontalAlignment: Text.AlignHCenter
             lineHeight: 1.6
@@ -290,7 +293,8 @@ Item {
     // ── 加载状态 ──
     BusyIndicator {
         anchors.centerIn: parent
-        visible: loading
+        visible: loading && items.length === 0
+        running: visible
         palette {
             mid: colors ? colors.blue : "#89b4fa"
         }
@@ -304,7 +308,7 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.topMargin: 8
-        visible: !loading
+        visible: true
         model: root.filteredItems
         clip: true
         spacing: 4
@@ -504,18 +508,6 @@ Item {
                 id: contentRow
                 spacing: 8
 
-                // vim 风格当前行指示符 ▸
-                Text {
-                    text: "▸"
-                    color: colors ? colors.blue : "#89b4fa"
-                    font.pixelSize: cfg.fontMedium
-                    font.bold: true
-                    visible: itemDel.highlighted
-                    Layout.preferredWidth: 14
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-
                 // 优先级指示器
                 Rectangle {
                     width: 6
@@ -525,6 +517,7 @@ Item {
                         switch (modelData.priority) {
                             case "🔴": return colors ? colors.red : "#f38ba8";
                             case "🟡": return colors ? colors.peach : "#fab387";
+                            case "⚪": return colors ? colors.subtext1 : "#a6adc8";
                             default:   return colors ? colors.green : "#a6e3a1";
                         }
                     }
@@ -561,6 +554,8 @@ Item {
                         color: colors ? colors.subtext0 : "#a6adc8"
                         font.pixelSize: cfg.fontBase
                         wrapMode: Text.Wrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
                         Layout.fillWidth: true
                         visible: modelData.description && modelData.description !== ""
                         opacity: modelData.status === "✅" ? 0.5 : 0.85
@@ -588,8 +583,8 @@ Item {
                     : hovered
                         ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.3)
                         : "transparent"
-                border.width: itemDel.highlighted ? 2 : 0
-                border.color: Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.8)
+                border.width: itemDel.highlighted ? 1 : 0
+                border.color: Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.6)
             }
 
             onClicked: {

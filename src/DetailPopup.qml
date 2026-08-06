@@ -13,6 +13,7 @@ Popup {
     property int previewImageIndex: -1
     property var previewImages: []
     property bool previewOnly: false
+    property bool deleteArmed: false
 
     signal editRequested(string itemType, var itemId)
 
@@ -88,12 +89,22 @@ Popup {
     // Quickshell 下 Popup 不会自动抢焦点，CloseOnEscape 失灵；
     // 打开时把焦点交给内容，Esc 才能由 contentItem 的 Keys 处理。
     onOpened: {
+        root.deleteArmed = false;
         if (root.previewOnly) imagePreview.open();
         else contentItem.forceActiveFocus();
     }
     // 关闭后把焦点还给所属列表，保证 gt/j/k 等继续可用。
     onClosed: {
+        root.deleteArmed = false;
+        deleteReset.stop();
         if (parent && parent.focusList) parent.focusList();
+    }
+
+    Timer {
+        id: deleteReset
+        interval: 2500
+        repeat: false
+        onTriggered: root.deleteArmed = false
     }
 
     background: Rectangle {
@@ -142,7 +153,7 @@ Popup {
                 onClicked: root.close()
                 contentItem: Text {
                     text: "✕"
-                    color: theme.overlay0
+                    color: theme.subtext1
                     font.pixelSize: cfg.fontBase
                 }
                 background: Rectangle {
@@ -190,7 +201,7 @@ Popup {
                 rowSpacing: 4
                 Layout.fillWidth: true
 
-                Text { text: "优先级"; color: theme.overlay0; font.pixelSize: cfg.fontSmall }
+                Text { text: "优先级"; color: theme.subtext1; font.pixelSize: cfg.fontSmall }
                 Text {
                     text: {
                         var p = itemData.priority;
@@ -202,7 +213,7 @@ Popup {
                     color: theme.text; font.pixelSize: cfg.fontSmall
                 }
 
-                Text { text: "状态"; color: theme.overlay0; font.pixelSize: cfg.fontSmall }
+                Text { text: "状态"; color: theme.subtext1; font.pixelSize: cfg.fontSmall }
                 Text {
                     text: itemData.status === "⬜" ? "⬜ 待办"
                         : itemData.status === "✅" ? "✅ 已完成"
@@ -212,7 +223,7 @@ Popup {
 
                 Text {
                     text: "截止日期"
-                    color: theme.overlay0
+                    color: theme.subtext1
                     font.pixelSize: cfg.fontSmall
                     visible: itemData.due !== undefined && itemData.due !== null && itemData.due !== "-"
                 }
@@ -252,12 +263,12 @@ Popup {
                 spacing: 12
                 Text {
                     text: "📎 " + (itemData.source || "?")
-                    color: theme.overlay0
+                    color: theme.subtext1
                     font.pixelSize: cfg.fontSmall
                 }
                 Text {
                     text: "🕐 " + (itemData.time || "")
-                    color: theme.overlay0
+                    color: theme.subtext1
                     font.pixelSize: cfg.fontSmall
                 }
             }
@@ -278,7 +289,7 @@ Popup {
 
             Text {
                 text: itemData.title || ""
-                color: theme.overlay0
+                color: theme.subtext1
                 font.pixelSize: cfg.fontSmall
                 Layout.fillWidth: true
             }
@@ -290,7 +301,7 @@ Popup {
 
                 Text {
                     text: "图片 · " + ((itemData.images || []).length)
-                    color: theme.overlay0
+                    color: theme.subtext1
                     font.pixelSize: cfg.fontTiny
                     Layout.fillWidth: true
                 }
@@ -335,7 +346,7 @@ Popup {
                                 anchors.bottom: parent.bottom
                                 anchors.margins: 6
                                 text: root.imageName(modelData)
-                                color: theme.overlay0
+                                color: theme.subtext1
                                 font.pixelSize: cfg.fontTiny
                                 elide: Text.ElideMiddle
                                 horizontalAlignment: Text.AlignHCenter
@@ -428,7 +439,7 @@ Popup {
 
                 contentItem: Text {
                     text: "关闭"
-                    color: theme.overlay0
+                    color: theme.subtext1
                     font.pixelSize: cfg.fontSmall
                     horizontalAlignment: Text.AlignHCenter
                 }
@@ -495,8 +506,8 @@ Popup {
                 Layout.fillWidth: true
                 flat: true
                 contentItem: Text {
-                    text: "🗑️ 删除"
-                    color: theme.peach
+                    text: root.deleteArmed ? "再次点击确认" : "🗑️ 删除"
+                    color: root.deleteArmed ? theme.red : theme.peach
                     font.pixelSize: cfg.fontSmall
                     font.bold: true
                     horizontalAlignment: Text.AlignHCenter
@@ -509,6 +520,14 @@ Popup {
                 }
                 onClicked: {
                     if (!itemData.id) { panel.showToast("⚠️ 该项没有 id，无法删除"); return; }
+                    if (!root.deleteArmed) {
+                        root.deleteArmed = true;
+                        deleteReset.restart();
+                        panel.showToast("再次点击删除以确认");
+                        return;
+                    }
+                    root.deleteArmed = false;
+                    deleteReset.stop();
                     panel.deleteItem(root.type, itemData.id, function() {
                         root.close();
                     });
@@ -521,7 +540,7 @@ Popup {
                 flat: true
                 contentItem: Text {
                     text: "关闭"
-                    color: theme.overlay0
+                    color: theme.subtext1
                     font.pixelSize: cfg.fontSmall
                     horizontalAlignment: Text.AlignHCenter
                 }
@@ -611,7 +630,7 @@ Popup {
 
                     Text {
                         text: root.previewImages.length > 1 ? ((root.previewImageIndex + 1) + " / " + root.previewImages.length) : ""
-                        color: theme.overlay0
+                        color: theme.subtext1
                         font.pixelSize: cfg.fontTiny
                         visible: root.previewImages.length > 1
                     }
@@ -623,7 +642,7 @@ Popup {
                         onClicked: imagePreview.close()
                         contentItem: Text {
                             text: "✕"
-                            color: theme.overlay0
+                            color: theme.subtext1
                             font.pixelSize: cfg.fontSmall
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter

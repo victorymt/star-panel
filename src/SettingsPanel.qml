@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-/// SettingsPanel — 设置面板（字体大小调整）
+/// SettingsPanel — 设置面板
 Popup {
     id: root
 
@@ -58,7 +58,7 @@ Popup {
             Text {
                 text: "⚙ 设置"
                 color: theme.text
-                font.pixelSize: 18
+                font.pixelSize: cfg.fontXl
                 font.bold: true
                 Layout.bottomMargin: 4
             }
@@ -67,13 +67,13 @@ Popup {
 
             Button {
                 flat: true
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
+                Layout.preferredWidth: cfg.iconButtonSize
+                Layout.preferredHeight: cfg.iconButtonSize
                 onClicked: root.close()
                 contentItem: Text {
                     text: "✕"
-                    color: theme.overlay0
-                    font.pixelSize: 13
+                    color: theme.subtext1
+                    font.pixelSize: cfg.fontBase
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -100,13 +100,14 @@ Popup {
             Text {
                 text: "主题"
                 color: theme.subtext0
-                font.pixelSize: 11
+                font.pixelSize: cfg.fontSmall
                 Layout.preferredWidth: 80
             }
 
             ComboBox {
                 id: themeCombo
                 Layout.fillWidth: true
+                Layout.preferredHeight: cfg.controlHeight
                 textRole: "label"
 
                 model: [
@@ -145,7 +146,7 @@ Popup {
                     text: themeCombo.model[themeCombo.currentIndex]
                         ? themeCombo.model[themeCombo.currentIndex].label : ""
                     color: theme.text
-                    font.pixelSize: 11
+                    font.pixelSize: cfg.fontSmall
                     verticalAlignment: Text.AlignVCenter
                 }
 
@@ -166,7 +167,7 @@ Popup {
                     contentItem: Text {
                         text: modelData.label
                         color: themeCombo.currentIndex === index ? theme.text : theme.subtext0
-                        font.pixelSize: 11
+                        font.pixelSize: cfg.fontSmall
                         font.bold: themeCombo.currentIndex === index
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -201,7 +202,7 @@ Popup {
                 indicator: Text {
                     text: "▾"
                     color: theme.subtext0
-                    font.pixelSize: 10
+                    font.pixelSize: cfg.fontTiny
                     anchors.right: parent.right
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
@@ -223,14 +224,14 @@ Popup {
             Text {
                 text: "面板宽度"
                 color: theme.subtext0
-                font.pixelSize: 11
+                font.pixelSize: cfg.fontSmall
                 Layout.preferredWidth: 100
             }
 
             Text {
                 text: cfg.panelWidth + "px"
                 color: theme.text
-                font.pixelSize: 13
+                font.pixelSize: cfg.fontBase
                 font.bold: true
                 Layout.preferredWidth: 48
                 horizontalAlignment: Text.AlignHCenter
@@ -238,15 +239,15 @@ Popup {
 
             Button {
                 flat: true
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
+                Layout.preferredWidth: cfg.iconButtonSize
+                Layout.preferredHeight: cfg.iconButtonSize
                 enabled: cfg.panelWidth > 280
                 onClicked: { cfg.panelWidth -= 20; cfg.saveSettings(); }
 
                 contentItem: Text {
                     text: "−"
                     color: enabled ? theme.subtext0 : theme.overlay0
-                    font.pixelSize: 13
+                    font.pixelSize: cfg.fontBase
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -261,15 +262,15 @@ Popup {
 
             Button {
                 flat: true
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
+                Layout.preferredWidth: cfg.iconButtonSize
+                Layout.preferredHeight: cfg.iconButtonSize
                 enabled: cfg.panelWidth < 900
                 onClicked: { cfg.panelWidth += 20; cfg.saveSettings(); }
 
                 contentItem: Text {
                     text: "+"
                     color: enabled ? theme.subtext0 : theme.overlay0
-                    font.pixelSize: 13
+                    font.pixelSize: cfg.fontBase
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -290,14 +291,14 @@ Popup {
             Text {
                 text: "动画速度"
                 color: theme.subtext0
-                font.pixelSize: 11
+                font.pixelSize: cfg.fontSmall
                 Layout.preferredWidth: 100
             }
 
             Text {
                 text: cfg.animationDuration + "ms"
                 color: theme.text
-                font.pixelSize: 13
+                font.pixelSize: cfg.fontBase
                 font.bold: true
                 Layout.preferredWidth: 48
                 horizontalAlignment: Text.AlignHCenter
@@ -305,15 +306,15 @@ Popup {
 
             Button {
                 flat: true
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
+                Layout.preferredWidth: cfg.iconButtonSize
+                Layout.preferredHeight: cfg.iconButtonSize
                 enabled: cfg.animationDuration > 100
                 onClicked: { cfg.animationDuration -= 20; cfg.saveSettings(); }
 
                 contentItem: Text {
                     text: "−"
                     color: enabled ? theme.subtext0 : theme.overlay0
-                    font.pixelSize: 13
+                    font.pixelSize: cfg.fontBase
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -328,15 +329,15 @@ Popup {
 
             Button {
                 flat: true
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
+                Layout.preferredWidth: cfg.iconButtonSize
+                Layout.preferredHeight: cfg.iconButtonSize
                 enabled: cfg.animationDuration < 600
                 onClicked: { cfg.animationDuration += 20; cfg.saveSettings(); }
 
                 contentItem: Text {
                     text: "+"
                     color: enabled ? theme.subtext0 : theme.overlay0
-                    font.pixelSize: 13
+                    font.pixelSize: cfg.fontBase
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -357,103 +358,93 @@ Popup {
             color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.3)
         }
 
-        // ── 字体大小 ──
+        // ── 界面缩放 ──
         RowLayout {
             spacing: 8
 
             Text {
-                text: "字体大小"
+                text: "界面缩放"
                 color: theme.subtext1
-                font.pixelSize: 10
+                font.pixelSize: cfg.fontTiny
                 font.bold: true
                 Layout.fillWidth: true
             }
         }
 
-        // 字体大小设置行
-        Repeater {
-            model: [
-                { label: "标签 / 日期",    key: "fontTiny" },
-                { label: "副标题 / 过滤",  key: "fontSmall" },
-                { label: "正文 / 标题",    key: "fontBase" },
-                { label: "空状态 / 图标",  key: "fontMedium" },
-                { label: "按钮",           key: "fontLarge" },
-                { label: "头部标题",       key: "fontXl" }
-            ]
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
 
-            delegate: RowLayout {
-                required property var modelData
-                spacing: 8
+            Text {
+                text: "文字与控件"
+                color: theme.subtext0
+                font.pixelSize: cfg.fontSmall
+                Layout.preferredWidth: 100
+            }
 
-                Text {
-                    text: modelData.label
-                    color: theme.subtext0
-                    font.pixelSize: 11
-                    Layout.preferredWidth: 100
+            Text {
+                text: Math.round(cfg.uiScale * 100) + "%"
+                color: theme.text
+                font.pixelSize: cfg.fontBase
+                font.bold: true
+                Layout.preferredWidth: 48
+                horizontalAlignment: Text.AlignHCenter
+            }
+
+            Button {
+                flat: true
+                Layout.preferredWidth: cfg.iconButtonSize
+                Layout.preferredHeight: cfg.iconButtonSize
+                enabled: cfg.uiScale > 0.8
+                onClicked: {
+                    cfg.uiScale = cfg.normalizeUiScale(cfg.uiScale - 0.05);
+                    cfg.saveSettings();
                 }
-
-                Text {
-                    text: cfg[modelData.key]
-                    color: theme.text
-                    font.pixelSize: 13
-                    font.bold: true
-                    Layout.preferredWidth: 24
+                contentItem: Text {
+                    text: "−"
+                    color: enabled ? theme.subtext0 : theme.overlay0
+                    font.pixelSize: cfg.fontBase
                     horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
-
-                Button {
-                    flat: true
-                    Layout.preferredWidth: 28
-                    Layout.preferredHeight: 28
-                    enabled: cfg[modelData.key] > 6
-                    onClicked: { cfg[modelData.key] -= 1; cfg.saveSettings(); }
-
-                    contentItem: Text {
-                        text: "−"
-                        color: enabled ? theme.subtext0 : theme.overlay0
-                        font.pixelSize: 13
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    background: Rectangle {
-                        radius: 6
-                        color: parent.hovered
-                            ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
-                            : "transparent"
-                    }
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered || parent.visualFocus
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
+                        : "transparent"
                 }
+            }
 
-                Button {
-                    flat: true
-                    Layout.preferredWidth: 28
-                    Layout.preferredHeight: 28
-                    enabled: cfg[modelData.key] < 40
-                    onClicked: { cfg[modelData.key] += 1; cfg.saveSettings(); }
-
-                    contentItem: Text {
-                        text: "+"
-                        color: enabled ? theme.subtext0 : theme.overlay0
-                        font.pixelSize: 13
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    background: Rectangle {
-                        radius: 6
-                        color: parent.hovered
-                            ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
-                            : "transparent"
-                    }
+            Button {
+                flat: true
+                Layout.preferredWidth: cfg.iconButtonSize
+                Layout.preferredHeight: cfg.iconButtonSize
+                enabled: cfg.uiScale < 1.6
+                onClicked: {
+                    cfg.uiScale = cfg.normalizeUiScale(cfg.uiScale + 0.05);
+                    cfg.saveSettings();
                 }
-
-                Text {
-                    text: "Aa"
-                    color: theme.subtext1
-                    font.pixelSize: cfg[modelData.key]
-                    Layout.preferredWidth: 20
+                contentItem: Text {
+                    text: "+"
+                    color: enabled ? theme.subtext0 : theme.overlay0
+                    font.pixelSize: cfg.fontBase
                     horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered || parent.visualFocus
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
+                        : "transparent"
+                }
+            }
+
+            Text {
+                text: "Aa"
+                color: theme.subtext1
+                font.pixelSize: cfg.fontBase
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
             }
         }
 
@@ -470,12 +461,7 @@ Popup {
             onClicked: {
                 cfg.panelWidth = cfg.defaultPanelWidth;
                 cfg.animationDuration = 280;
-                cfg.fontTiny   = cfg.defaultFontTiny;
-                cfg.fontSmall  = cfg.defaultFontSmall;
-                cfg.fontBase   = cfg.defaultFontBase;
-                cfg.fontMedium = cfg.defaultFontMedium;
-                cfg.fontLarge  = cfg.defaultFontLarge;
-                cfg.fontXl     = cfg.defaultFontXl;
+                cfg.uiScale = cfg.defaultUiScale;
                 cfg.themeName  = "";
                 cfg.todoFilter = "Pending";
                 cfg.logFilterDays = 3;
@@ -485,7 +471,7 @@ Popup {
             contentItem: Text {
                 text: "恢复默认"
                 color: theme.subtext0
-                font.pixelSize: 11
+                font.pixelSize: cfg.fontSmall
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
             }
@@ -500,8 +486,8 @@ Popup {
 
         Text {
             text: "修改即时生效 · 重启后保留"
-            color: theme.overlay0
-            font.pixelSize: 10
+            color: theme.subtext1
+            font.pixelSize: cfg.fontTiny
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
         }

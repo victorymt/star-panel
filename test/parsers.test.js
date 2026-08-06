@@ -16,6 +16,8 @@ const {
   listFetchResult,
   normalizeReloadType,
   mergeQueuedReload,
+  retryReloadType,
+  deleteCommandDecision,
   completionDecision,
   pipeCompletionDecision,
   deleteCompletionDecision,
@@ -301,6 +303,36 @@ test("mergeQueuedReload promotes different singles to all", () => {
 test("mergeQueuedReload keeps all priority", () => {
   assert.strictEqual(mergeQueuedReload("all", "todo"), "all");
   assert.strictEqual(mergeQueuedReload("todo", undefined), "all");
+});
+test("retryReloadType retries the timed-out request scope", () => {
+  assert.strictEqual(retryReloadType("timed out", "all", "todo"), "all");
+  assert.strictEqual(retryReloadType("timed out", "log", "todo"), "log");
+});
+test("retryReloadType uses the active tab for a normal error", () => {
+  assert.strictEqual(retryReloadType("", "all", "idea"), "idea");
+});
+
+// ── command delete confirmation ──
+test("deleteCommandDecision rejects a missing current item", () => {
+  assert.deepStrictEqual(deleteCommandDecision("", "", "todo", ""), {
+    action: "reject", type: "", id: ""
+  });
+});
+test("deleteCommandDecision arms the first concrete target", () => {
+  assert.deepStrictEqual(deleteCommandDecision("", "", "todo", 42), {
+    action: "arm", type: "todo", id: "42"
+  });
+});
+test("deleteCommandDecision only deletes the already armed target", () => {
+  assert.deepStrictEqual(deleteCommandDecision("todo", "42", "todo", 42), {
+    action: "delete", type: "todo", id: "42"
+  });
+  assert.deepStrictEqual(deleteCommandDecision("todo", "42", "todo", 43), {
+    action: "arm", type: "todo", id: "43"
+  });
+  assert.deepStrictEqual(deleteCommandDecision("todo", "42", "idea", 42), {
+    action: "arm", type: "idea", id: "42"
+  });
 });
 
 // ── popup completion decisions ──

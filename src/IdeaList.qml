@@ -106,13 +106,13 @@ Item {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 28
+        height: cfg.compactControlHeight
         placeholderText: "🔍 搜索灵感..."
-        placeholderTextColor: colors ? colors.overlay0 : "#6c7086"
+        placeholderTextColor: colors ? colors.subtext1 : "#a6adc8"
         color: colors ? colors.text : "#cdd6f4"
         font.pixelSize: cfg.fontSmall
         verticalAlignment: Text.AlignVCenter
-        rightPadding: clearBtn.visible ? 20 : 6
+        rightPadding: clearBtn.visible ? cfg.compactControlHeight : 6
         background: Rectangle {
             radius: 6
             color: searchField.activeFocus
@@ -144,12 +144,15 @@ Item {
         Text {
             id: clearBtn
             text: "✕"
-            color: colors ? colors.overlay0 : "#6c7086"
-            font.pixelSize: cfg.fontTiny
+            color: colors ? colors.subtext1 : "#a6adc8"
+            font.pixelSize: cfg.fontSmall
+            width: cfg.compactControlHeight
+            height: parent.height
             anchors.right: parent.right
-            anchors.rightMargin: 6
             anchors.verticalCenter: parent.verticalCenter
             visible: searchField.text !== ""
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
             MouseArea {
                 anchors.fill: parent
                 onClicked: { searchField.text = ""; searchField.focus = false; }
@@ -169,7 +172,7 @@ Item {
                 if (searchText.trim()) return "🔍 没有匹配的结果";
                 return "💭 暂无灵感\n等待星光的降临~";
             }
-            color: colors ? colors.overlay0 : "#6c7086"
+            color: colors ? colors.subtext1 : "#a6adc8"
             font.pixelSize: cfg.fontMedium
             horizontalAlignment: Text.AlignHCenter
             lineHeight: 1.6
@@ -179,7 +182,8 @@ Item {
     // ── 加载状态 ──
     BusyIndicator {
         anchors.centerIn: parent
-        visible: loading
+        visible: loading && items.length === 0
+        running: visible
         palette {
             mid: colors ? colors.mauve : "#cba6f7"
         }
@@ -193,7 +197,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        visible: !loading
+        visible: true
         model: root.filteredItems
         clip: true
         spacing: 4
@@ -351,16 +355,6 @@ Item {
                 id: contentColumn
                 spacing: 2
 
-                // vim 风格当前行指示符 ▸
-                Text {
-                    text: "▸"
-                    color: colors ? colors.blue : "#89b4fa"
-                    font.pixelSize: cfg.fontSmall
-                    font.bold: true
-                    visible: itemDel.highlighted
-                    Layout.leftMargin: 0
-                }
-
                 Text {
                     text: modelData.title || "(untitled)"
                     color: colors ? colors.text : "#cdd6f4"
@@ -393,8 +387,8 @@ Item {
                     : hovered
                         ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.3)
                         : "transparent"
-                border.width: itemDel.highlighted ? 2 : 0
-                border.color: Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.8)
+                border.width: itemDel.highlighted ? 1 : 0
+                border.color: Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.6)
             }
 
             onClicked: {

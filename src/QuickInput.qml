@@ -10,7 +10,9 @@ import Quickshell.Io
 Item {
     id: root
 
-    implicitHeight: logImageInputVisible ? 72 : 40
+    readonly property int mainRowHeight: cfg.controlHeight
+    readonly property int attachmentRowHeight: cfg.compactControlHeight
+    implicitHeight: logImageInputVisible ? mainRowHeight + attachmentRowHeight : mainRowHeight
     property bool inputActive: textInput.activeFocus || logImageField.activeFocus
     property bool cmdMode: false
     readonly property bool logImageInputVisible: !cmdMode && typeSelector.typeModels[typeSelector.currentIndex].type === "log"
@@ -207,7 +209,7 @@ Item {
                                 }
                                 Text {
                                     text: modelData.desc
-                                    color: theme.overlay0
+                                    color: theme.subtext1
                                     font.pixelSize: cfg.fontTiny
                                     Layout.fillWidth: true
                                     elide: Text.ElideRight
@@ -228,7 +230,7 @@ Item {
                     Text {
                         visible: cmdPanel.candidates.length === 0
                         text: "无匹配命令"
-                        color: theme.overlay0
+                        color: theme.subtext1
                         font.pixelSize: cfg.fontSmall
                         Layout.fillWidth: true
                         Layout.preferredHeight: 24
@@ -245,7 +247,7 @@ Item {
 
             RowLayout {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 40
+                Layout.preferredHeight: root.mainRowHeight
                 Layout.leftMargin: 10
                 Layout.rightMargin: 6
                 spacing: 6
@@ -256,7 +258,7 @@ Item {
                     : (root.inputActive ? "✎ INSERT" : "▸ NORMAL")
                 color: root.cmdMode ? (theme ? theme.blue : "#89b4fa")
                     : (root.inputActive ? (theme ? theme.green : "#a6e3a1")
-                                        : (theme ? theme.overlay0 : "#6c7086"))
+                                        : (theme ? theme.subtext1 : "#a6adc8"))
                 font.pixelSize: cfg.fontTiny
                 font.bold: true
                 Layout.preferredWidth: 64
@@ -277,7 +279,7 @@ Item {
                 Layout.fillWidth: true
                 verticalAlignment: Text.AlignVCenter
                 color: theme ? theme.text : "#cdd6f4"
-                placeholderTextColor: theme ? theme.overlay0 : "#6c7086"
+                placeholderTextColor: theme ? theme.subtext1 : "#a6adc8"
                 placeholderText: root.cmdMode ? ": 输入命令... (:help 查看全部)" : "快速捕获...  Tab切换 Enter提交"
                 font.pixelSize: cfg.fontBase
                 clip: true
@@ -332,8 +334,7 @@ Item {
                         panel.switchToEnglishIme();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Escape && !root.cmdMode) {
-                        // vim: Esc 从 insert mode 返回 normal mode（列表）
-                        textInput.text = "";
+                        // vim: Esc 从 insert mode 返回 normal mode（列表），保留未提交草稿。
                         panel.focusCurrentList();
                         panel.switchToEnglishIme();
                         event.accepted = true;
@@ -504,7 +505,7 @@ Item {
             RowLayout {
                 id: imageRow
                 Layout.fillWidth: true
-                Layout.preferredHeight: 28
+                Layout.preferredHeight: root.attachmentRowHeight
                 Layout.leftMargin: 10
                 Layout.rightMargin: 6
                 spacing: 6
@@ -512,7 +513,7 @@ Item {
 
                 Text {
                     text: "📎"
-                    color: theme ? theme.overlay0 : "#6c7086"
+                    color: theme ? theme.subtext1 : "#a6adc8"
                     font.pixelSize: cfg.fontSmall
                     Layout.preferredWidth: 64
                     horizontalAlignment: Text.AlignHCenter
@@ -523,7 +524,7 @@ Item {
                     id: logImageField
                     Layout.fillWidth: true
                     color: theme ? theme.text : "#cdd6f4"
-                    placeholderTextColor: theme ? theme.overlay0 : "#6c7086"
+                    placeholderTextColor: theme ? theme.subtext1 : "#a6adc8"
                     placeholderText: "图片路径，或 Ctrl+V 粘贴图片"
                     font.pixelSize: cfg.fontSmall
                     verticalAlignment: Text.AlignVCenter
@@ -562,7 +563,7 @@ Item {
                     }
                     contentItem: Text {
                         text: "✕"
-                        color: theme ? theme.overlay0 : "#6c7086"
+                        color: theme ? theme.subtext1 : "#a6adc8"
                         font.pixelSize: cfg.fontTiny
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter

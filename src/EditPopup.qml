@@ -17,9 +17,14 @@ Popup {
     property bool loading: false
     property string loadError: ""
     property string originalLogImagesText: ""
+    property bool dirty: false
+    property bool hydrating: false
+
+    onPriorityValueChanged: markDirty()
 
     modal: true
-    closePolicy: saveProc.running ? Popup.NoAutoClose : Popup.CloseOnEscape | Popup.CloseOnPressOutside
+    // 编辑态不允许点外部误关；Esc、取消和关闭按钮统一走 requestClose()。
+    closePolicy: Popup.NoAutoClose
     dim: true
 
     implicitWidth: Math.min(parent ? parent.width * 0.92 : 380, 420)
@@ -33,7 +38,10 @@ Popup {
     onOpened: contentItem.forceActiveFocus()
     // 关闭后把焦点还给所属列表，保证 j/k/e 等继续可用
     onClosed: {
+        if (discardPopup.visible) discardPopup.close();
         if (!saveProc.running) clipboardImagePaste.cleanupAll();
+        root.dirty = false;
+        root.hydrating = false;
         if (parent && parent.focusList) parent.focusList();
     }
 
@@ -54,6 +62,8 @@ Popup {
 
     function openEdit(t, id) {
         clipboardImagePaste.cleanupAll();
+        root.hydrating = true;
+        root.dirty = false;
         root.type = t;
         root.itemId = id;
         root.formData = ({});
@@ -64,6 +74,31 @@ Popup {
         loadProc.command = ["starcatch", "--json", t, "show", id];
         loadProc.running = true;
         root.open();
+    }
+
+    function markDirty() {
+        if (!root.hydrating && !root.loading && root.visible)
+            root.dirty = true;
+    }
+
+    function requestClose() {
+        if (saveProc.running) {
+            panel.showToast("⏳ 正在保存...");
+            return;
+        }
+        if (root.dirty) {
+            discardPopup.open();
+            return;
+        }
+        root.close();
+    }
+
+    function handleEscape() {
+        if (discardPopup.visible) {
+            discardPopup.close();
+            return;
+        }
+        requestClose();
     }
 
     function splitImagePaths(text) {
@@ -82,6 +117,7 @@ Popup {
 
     // 回填表单（按类型把 show 的 JSON 映射到各字段）
     function fillForm(raw) {
+        root.hydrating = true;
         root.formData = raw;
         if (root.type === "todo") {
             titleField.text = raw.title || "";
@@ -104,6 +140,8 @@ Popup {
             logImagesText.text = (raw.images || []).join("\n");
             root.originalLogImagesText = logImagesText.text;
         }
+        root.hydrating = false;
+        root.dirty = false;
     }
 
     // 全字段直传：空串=清空（后端三态）。所有字段显式传，不做 diff。
@@ -165,6 +203,7 @@ Popup {
             root.loading = false;
 
             if (exitCode !== 0) {
+                root.hydrating = false;
                 var detail = loadStderr.text.trim();
                 root.loadError = "加载失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）");
                 return;
@@ -172,6 +211,7 @@ Popup {
 
             var txt = loadStdout.text.trim();
             if (!txt) {
+                root.hydrating = false;
                 root.loadError = "加载失败：未取到数据";
                 return;
             }
@@ -180,6 +220,7 @@ Popup {
                 root.fillForm(JSON.parse(txt));
                 root.loadError = "";
             } catch (e) {
+                root.hydrating = false;
                 root.loadError = "解析失败：" + e.message;
             }
         }
@@ -202,6 +243,7 @@ Popup {
             }
 
             panel.showToast("✅ 已更新");
+            root.dirty = false;
             clipboardImagePaste.cleanupAll();
             root.close();
             if (t) panel.reloadData(t);
@@ -221,7 +263,7 @@ Popup {
                     return;
                 }
                 panel.switchToEnglishIme();
-                root.close();
+                root.handleEscape();
                 event.accepted = true;
             } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
                 root.save();
@@ -248,10 +290,10 @@ Popup {
             Button {
                 flat: true
                 enabled: !saveProc.running
-                onClicked: root.close()
+                onClicked: root.requestClose()
                 contentItem: Text {
                     text: "✕"
-                    color: theme.overlay0
+                    color: theme.subtext1
                     font.pixelSize: cfg.fontBase
                 }
                 background: Rectangle {
@@ -293,13 +335,14 @@ Popup {
             spacing: 6
             visible: root.type === "todo" && !root.loading && root.loadError === ""
 
-            Text { text: "标题"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "标题"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextField {
                 id: titleField
+                onTextChanged: root.markDirty()
                 onAccepted: root.save()
                 Layout.fillWidth: true
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "必填"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
@@ -312,13 +355,14 @@ Popup {
                 }
             }
 
-            Text { text: "描述"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "描述"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextArea {
                 id: descField
+                onTextChanged: root.markDirty()
                 Layout.fillWidth: true
                 Layout.preferredHeight: 72
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "留空清除"
                 font.pixelSize: cfg.fontBase
                 wrapMode: Text.Wrap
@@ -337,7 +381,7 @@ Popup {
                 }
             }
 
-            Text { text: "优先级"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "优先级"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 4
@@ -356,7 +400,7 @@ Popup {
                         onClicked: root.priorityValue = modelData.v
                         contentItem: Text {
                             text: modelData.l
-                            color: parent.checked ? theme.blue : theme.overlay0
+                            color: parent.checked ? theme.blue : theme.subtext1
                             font.pixelSize: cfg.fontSmall
                             font.bold: parent.checked
                             horizontalAlignment: Text.AlignHCenter
@@ -375,13 +419,14 @@ Popup {
                 Item { Layout.fillWidth: true }
             }
 
-            Text { text: "截止日期"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "截止日期"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextField {
                 id: dueField
+                onTextChanged: root.markDirty()
                 onAccepted: root.save()
                 Layout.fillWidth: true
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "YYYY-MM-DD 或 明天/next Monday · 留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
@@ -394,13 +439,14 @@ Popup {
                 }
             }
 
-            Text { text: "标签"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "标签"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextField {
                 id: tagsField
+                onTextChanged: root.markDirty()
                 onAccepted: root.save()
                 Layout.fillWidth: true
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "逗号分隔 · 留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
@@ -413,13 +459,14 @@ Popup {
                 }
             }
 
-            Text { text: "项目"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "项目"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextField {
                 id: projectField
+                onTextChanged: root.markDirty()
                 onAccepted: root.save()
                 Layout.fillWidth: true
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
@@ -439,13 +486,14 @@ Popup {
             spacing: 6
             visible: root.type === "idea" && !root.loading && root.loadError === ""
 
-            Text { text: "标题"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "标题"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextField {
                 id: ideaTitleField
+                onTextChanged: root.markDirty()
                 onAccepted: root.save()
                 Layout.fillWidth: true
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "必填"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
@@ -458,13 +506,14 @@ Popup {
                 }
             }
 
-            Text { text: "内容"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "内容"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextArea {
                 id: contentField
+                onTextChanged: root.markDirty()
                 Layout.fillWidth: true
                 Layout.preferredHeight: 96
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "留空清除"
                 font.pixelSize: cfg.fontBase
                 wrapMode: Text.Wrap
@@ -483,13 +532,14 @@ Popup {
                 }
             }
 
-            Text { text: "来源"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "来源"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextField {
                 id: sourceField
+                onTextChanged: root.markDirty()
                 onAccepted: root.save()
                 Layout.fillWidth: true
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
@@ -502,13 +552,14 @@ Popup {
                 }
             }
 
-            Text { text: "标签"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "标签"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextField {
                 id: ideaTagsField
+                onTextChanged: root.markDirty()
                 onAccepted: root.save()
                 Layout.fillWidth: true
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "逗号分隔 · 留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
@@ -521,13 +572,14 @@ Popup {
                 }
             }
 
-            Text { text: "项目"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "项目"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextField {
                 id: ideaProjectField
+                onTextChanged: root.markDirty()
                 onAccepted: root.save()
                 Layout.fillWidth: true
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
@@ -547,7 +599,7 @@ Popup {
             spacing: 6
             visible: root.type === "log" && !root.loading && root.loadError === ""
 
-            Text { text: "内容"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "内容"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             ScrollView {
                 id: logContentScroll
                 Layout.fillWidth: true
@@ -567,9 +619,10 @@ Popup {
 
                 TextArea {
                     id: logContentField
+                    onTextChanged: root.markDirty()
                     width: logContentScroll.availableWidth
                     color: theme.text
-                    placeholderTextColor: theme.overlay0
+                    placeholderTextColor: theme.subtext1
                     placeholderText: "必填"
                     font.pixelSize: cfg.fontBase
                     wrapMode: Text.Wrap
@@ -587,13 +640,14 @@ Popup {
                 }
             }
 
-            Text { text: "心情"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "心情"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextField {
                 id: moodField
+                onTextChanged: root.markDirty()
                 onAccepted: root.save()
                 Layout.fillWidth: true
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "如 happy / sad · 留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
@@ -606,13 +660,14 @@ Popup {
                 }
             }
 
-            Text { text: "标签"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "标签"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextField {
                 id: logTagsField
+                onTextChanged: root.markDirty()
                 onAccepted: root.save()
                 Layout.fillWidth: true
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "逗号分隔 · 留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
@@ -625,13 +680,14 @@ Popup {
                 }
             }
 
-            Text { text: "项目"; color: theme.overlay0; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            Text { text: "项目"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
             TextField {
                 id: logProjectField
+                onTextChanged: root.markDirty()
                 onAccepted: root.save()
                 Layout.fillWidth: true
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "留空清除"
                 font.pixelSize: cfg.fontBase
                 verticalAlignment: Text.AlignVCenter
@@ -646,16 +702,17 @@ Popup {
 
             Text {
                 text: "图片路径"
-                color: theme.overlay0
+                color: theme.subtext1
                 font.pixelSize: cfg.fontTiny
                 Layout.fillWidth: true
             }
             TextArea {
                 id: logImagesText
+                onTextChanged: root.markDirty()
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.min(96, Math.max(44, implicitHeight))
                 color: theme.text
-                placeholderTextColor: theme.overlay0
+                placeholderTextColor: theme.subtext1
                 placeholderText: "路径或 Ctrl+V 粘贴图片 · 留空清除"
                 font.pixelSize: cfg.fontTiny
                 wrapMode: Text.WrapAnywhere
@@ -710,7 +767,7 @@ Popup {
                 enabled: !saveProc.running
                 contentItem: Text {
                     text: "取消"
-                    color: theme.overlay0
+                    color: theme.subtext1
                     font.pixelSize: cfg.fontSmall
                     horizontalAlignment: Text.AlignHCenter
                 }
@@ -720,7 +777,105 @@ Popup {
                         ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
                         : "transparent"
                 }
-                onClicked: root.close()
+                onClicked: root.requestClose()
+            }
+        }
+    }
+
+    // ── 未保存改动确认 ──
+    Popup {
+        id: discardPopup
+        parent: root.contentItem
+        x: Math.max(8, (root.width - width) / 2)
+        y: Math.max(8, (root.height - height) / 2)
+        width: Math.max(240, Math.min(root.width - 16, 320))
+        implicitHeight: discardColumn.implicitHeight + 24
+        padding: 12
+        modal: true
+        focus: true
+        closePolicy: Popup.NoAutoClose
+
+        onOpened: contentItem.forceActiveFocus()
+
+        background: Rectangle {
+            radius: 8
+            color: Qt.rgba(theme.base.r, theme.base.g, theme.base.b, 0.99)
+            border.width: 1
+            border.color: Qt.rgba(theme.peach.r, theme.peach.g, theme.peach.b, 0.55)
+        }
+
+        contentItem: ColumnLayout {
+            id: discardColumn
+            focus: true
+            spacing: 10
+
+            Keys.onPressed: function(event) {
+                if (event.key === Qt.Key_Escape) {
+                    discardPopup.close();
+                    event.accepted = true;
+                }
+            }
+
+            Text {
+                text: "放弃未保存的改动？"
+                color: theme.text
+                font.pixelSize: cfg.fontBase
+                font.bold: true
+                Layout.fillWidth: true
+            }
+
+            Text {
+                text: "当前编辑内容还没有保存。"
+                color: theme.subtext1
+                font.pixelSize: cfg.fontSmall
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Button {
+                    Layout.fillWidth: true
+                    flat: true
+                    onClicked: discardPopup.close()
+                    contentItem: Text {
+                        text: "继续编辑"
+                        color: theme.blue
+                        font.pixelSize: cfg.fontSmall
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    background: Rectangle {
+                        radius: 6
+                        color: parent.hovered
+                            ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.5)
+                            : "transparent"
+                    }
+                }
+
+                Button {
+                    Layout.fillWidth: true
+                    flat: true
+                    onClicked: {
+                        discardPopup.close();
+                        root.dirty = false;
+                        root.close();
+                    }
+                    contentItem: Text {
+                        text: "放弃改动"
+                        color: theme.red
+                        font.pixelSize: cfg.fontSmall
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    background: Rectangle {
+                        radius: 6
+                        color: parent.hovered
+                            ? Qt.rgba(theme.red.r, theme.red.g, theme.red.b, 0.16)
+                            : "transparent"
+                    }
+                }
             }
         }
     }

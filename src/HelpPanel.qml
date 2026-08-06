@@ -73,7 +73,7 @@ Popup {
                     onClicked: root.close()
                     contentItem: Text {
                         text: "✕"
-                        color: theme.overlay0
+                        color: theme.subtext1
                         font.pixelSize: cfg.fontBase
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
@@ -90,7 +90,7 @@ Popup {
             // 引导
             Text {
                 text: "输入 :help 重新打开 · 输入框中 Esc 先回列表再关面板 · q/Ctrl+Q 任意位置关"
-                color: theme.overlay0
+                color: theme.subtext1
                 font.pixelSize: cfg.fontTiny
                 Layout.fillWidth: true
                 Layout.bottomMargin: 6
@@ -250,7 +250,7 @@ Popup {
             // 底部提示
             Text {
                 text: "🌟 溯星逆流追寻星渺"
-                color: theme.overlay0
+                color: theme.subtext1
                 font.pixelSize: cfg.fontTiny
                 Layout.fillWidth: true
                 Layout.topMargin: 10

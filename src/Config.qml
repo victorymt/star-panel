@@ -17,21 +17,26 @@ Item {
     // ── 默认显示的标签页 ──
     property int defaultTab: 0  // 0=todo, 1=idea, 2=log
 
-    // ── 字体大小 ──
-    property int fontTiny: 10    // 标签、日志日期
-    property int fontSmall: 11   // 过滤器按钮、截止日期、灵感副标题、类型选择器
-    property int fontBase: 13    // 标签页、输入框、待办/灵感标题、日志正文
-    property int fontMedium: 14  // 空状态提示、状态图标、类型图标
-    property int fontLarge: 16   // 刷新/关闭按钮
-    property int fontXl: 18      // 头部标题
-
-    // ── 字体默认值（恢复用）──
+    // ── 字体与界面缩放 ──
+    // 所有字号从同一比例派生，避免正文、标题和控件被分别调整后层级倒置。
     readonly property int defaultFontTiny: 10
     readonly property int defaultFontSmall: 11
     readonly property int defaultFontBase: 13
     readonly property int defaultFontMedium: 14
     readonly property int defaultFontLarge: 16
     readonly property int defaultFontXl: 18
+    readonly property real defaultUiScale: 1.0
+
+    property real uiScale: defaultUiScale
+    readonly property int fontTiny: Math.round(defaultFontTiny * uiScale)
+    readonly property int fontSmall: Math.round(defaultFontSmall * uiScale)
+    readonly property int fontBase: Math.round(defaultFontBase * uiScale)
+    readonly property int fontMedium: Math.round(defaultFontMedium * uiScale)
+    readonly property int fontLarge: Math.round(defaultFontLarge * uiScale)
+    readonly property int fontXl: Math.round(defaultFontXl * uiScale)
+    readonly property int compactControlHeight: Math.max(32, fontSmall + 16)
+    readonly property int controlHeight: Math.max(36, fontBase + 18)
+    readonly property int iconButtonSize: Math.max(32, fontLarge + 12)
 
     // ── 主题 ──
     property string themeName: ""  // 空=Matugen自动, mocha/latte/frappe/macchiato=预设
@@ -58,12 +63,12 @@ Item {
             onStreamFinished: {
                 try {
                     var data = JSON.parse(this.text.trim());
-                    if (typeof data.fontTiny   === "number") config.fontTiny   = data.fontTiny;
-                    if (typeof data.fontSmall  === "number") config.fontSmall  = data.fontSmall;
-                    if (typeof data.fontBase   === "number") config.fontBase   = data.fontBase;
-                    if (typeof data.fontMedium === "number") config.fontMedium = data.fontMedium;
-                    if (typeof data.fontLarge  === "number") config.fontLarge  = data.fontLarge;
-                    if (typeof data.fontXl     === "number") config.fontXl     = data.fontXl;
+                    if (typeof data.uiScale === "number") {
+                        config.uiScale = config.normalizeUiScale(data.uiScale);
+                    } else if (typeof data.fontBase === "number") {
+                        // 兼容旧版六级字号设置，以正文大小推导统一比例。
+                        config.uiScale = config.normalizeUiScale(data.fontBase / config.defaultFontBase);
+                    }
                     if (typeof data.panelWidth === "number") config.panelWidth = data.panelWidth;
                     if (typeof data.animationDuration === "number") config.animationDuration = data.animationDuration;
                     if (typeof data.themeName  === "string") config.themeName  = data.themeName;
@@ -93,12 +98,7 @@ Item {
                 themeName: themeName,
                 panelWidth: panelWidth,
                 animationDuration: animationDuration,
-                fontTiny: fontTiny,
-                fontSmall: fontSmall,
-                fontBase: fontBase,
-                fontMedium: fontMedium,
-                fontLarge: fontLarge,
-                fontXl: fontXl,
+                uiScale: normalizeUiScale(uiScale),
                 todoFilter: todoFilter,
                 logFilterDays: normalizeLogFilterDays(logFilterDays)
             };
@@ -119,5 +119,11 @@ Item {
     function normalizeLogFilterDays(value) {
         var days = Number(value);
         return days === 1 || days === 3 || days === 7 || days === 30 ? days : 3;
+    }
+
+    function normalizeUiScale(value) {
+        var scale = Number(value);
+        if (!isFinite(scale)) return defaultUiScale;
+        return Math.max(0.8, Math.min(1.6, Math.round(scale * 20) / 20));
     }
 }

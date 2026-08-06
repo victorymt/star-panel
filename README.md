@@ -23,7 +23,7 @@ qs -c star-panel ipc call panel toggle
 ├── shell.qml              ←── QS 入口
 ├── src/
 │   ├── Panel.qml          ←── 主面板（右侧滑出）
-│   ├── SettingsPanel.qml  ←── 设置面板（主题 / 面板宽度 / 字体大小）
+│   ├── SettingsPanel.qml  ←── 设置面板（主题 / 面板宽度 / 界面缩放）
 │   ├── TodoList.qml       ←── 待办
 │   ├── IdeaList.qml       ←── 灵感
 │   ├── LogList.qml        ←── 日志
@@ -43,8 +43,10 @@ qs -c star-panel ipc call panel toggle
 | 💭 灵感列表 | 标题 + 内容摘要 |
 | 📓 日志列表 | 多行内容与图片缩略图，支持今天 / 近 3 天 / 近 7 天 / 近 30 天筛选 |
 | 🚿 快速输入 | 类型切换（📋 待办 / 💭 灵感 / 📓 日志），日志可附加本地图片路径 |
+| 🔄 稳定加载 | 待办 / 灵感 / 日志按类型独立加载，刷新时保留旧列表；失败后可直接重试 |
+| 🛡️ 安全操作 | 删除当前项需要二次确认，关闭编辑弹窗时保护未保存修改 |
 | 🎨 主题切换 | 5 种主题可选：Auto（Matugen 壁纸取色）/ Mocha / Frappé / Macchiato / Latte |
-| ⚙ 设置面板 | ComboBox 主题选择、面板宽度调节、6 级字体大小独立调整 |
+| ⚙ 设置面板 | ComboBox 主题选择、面板宽度调节、统一界面缩放 |
 | 💾 配置持久化 | 所有设置保存到 `~/.config/star-panel/settings.json`，重启保留 |
 | 🖥️ IPC 控制 | `qs -c star-panel ipc call panel toggle/show/hide` |
 
@@ -57,8 +59,9 @@ star-panel 面向 Vim / Emacs 用户做了完整键盘路径：
 | 全局 | `Esc` / `Ctrl+Q` 关闭弹窗或面板，`Ctrl+1/2/3` 切 tab，`/` 聚焦搜索，`Ctrl+R` 刷新 |
 | 列表 normal mode | `j/k` 上下，`h/l` 切 tab，`gg/G` 顶部/底部，`Ctrl+U/D` 半页，`Ctrl+B/F` 整页 |
 | 列表操作 | `Enter` 查看，`Space` 完成/恢复 Todo，`a` 归档 Todo，`e` 编辑，`y` 复制，`dd` 删除，`r/R` 刷新当前/全部，`o` 进入快速输入，`:` 进入命令模式 |
-| 命令模式 | `:open`、`:e/:edit`、`:d/:delete`、`:y/:copy/:yank`、`:done/:archive/:reopen`、`:r/:reload`、`:help` |
+| 命令模式 | `:open`、`:e/:edit`、`:d/:delete`（对同一项再次执行以确认）、`:y/:copy/:yank`、`:done/:archive/:reopen`、`:r/:reload`、`:help` |
 | Emacs 编辑 | 搜索、快速输入、编辑弹窗支持 `Ctrl+A/E/B/F/K/U` |
+| 快速输入退出 | 按 `Esc` 返回列表并保留未提交草稿，再次聚焦可继续输入 |
 | Esc 切英文 | 从快速输入 / 搜索 / 编辑弹窗按 `Esc` 退出时，自动把 fcitx5+rime 切到英文（`ascii_mode`） |
 
 完整快捷键说明见 [doc/README.md#43-快捷键](./doc/README.md#43-快捷键)。
@@ -106,7 +109,7 @@ output_path = "~/.config/star-panel/theme.json"
 
 - **主题选择** — ComboBox 下拉切换 Auto / Catppuccin 预设
 - **面板宽度** — 280px ~ 900px，步进 20px
-- **字体大小** — 6 级独立调节（标签 / 副标题 / 正文 / 图标 / 按钮 / 标题）
+- **界面缩放** — 统一调整文字与控件密度（80% ~ 160%），保持标题、正文和元信息的层级关系
 - **恢复默认** — 一键重置所有参数
 
 所有修改即时生效，自动保存。
