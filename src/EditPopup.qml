@@ -414,27 +414,39 @@ Popup {
             }
 
             Text { text: "描述"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
-            TextArea {
-                id: descField
-                onTextChanged: root.markDirty()
+            ScrollView {
+                id: todoDescriptionScroll
                 Layout.fillWidth: true
-                Layout.preferredHeight: 72
-                color: theme.text
-                placeholderTextColor: theme.subtext1
-                placeholderText: "留空清除"
-                font.pixelSize: cfg.fontBase
-                wrapMode: Text.Wrap
+                Layout.minimumHeight: 72
+                Layout.preferredHeight: 120
+                Layout.maximumHeight: 180
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
-                    border.width: parent.activeFocus ? 1 : 0
+                    border.width: descField.activeFocus ? 1 : 0
                     border.color: Qt.rgba(theme.blue.r, theme.blue.g, theme.blue.b, 0.5)
                 }
-                Keys.onPressed: function(event) {
-                    if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
-                        root.save(); event.accepted = true;
-                    } else {
-                        panel.handleEmacsEdit(descField, event);
+
+                TextArea {
+                    id: descField
+                    onTextChanged: root.markDirty()
+                    width: todoDescriptionScroll.availableWidth
+                    color: theme.text
+                    placeholderTextColor: theme.subtext1
+                    placeholderText: "留空清除"
+                    font.pixelSize: cfg.fontBase
+                    wrapMode: Text.Wrap
+                    background: null
+                    Keys.onPressed: function(event) {
+                        if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                            root.save(); event.accepted = true;
+                        } else {
+                            panel.handleEmacsEdit(descField, event);
+                        }
                     }
                 }
             }
@@ -565,27 +577,39 @@ Popup {
             }
 
             Text { text: "内容"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
-            TextArea {
-                id: contentField
-                onTextChanged: root.markDirty()
+            ScrollView {
+                id: ideaContentScroll
                 Layout.fillWidth: true
-                Layout.preferredHeight: 96
-                color: theme.text
-                placeholderTextColor: theme.subtext1
-                placeholderText: "留空清除"
-                font.pixelSize: cfg.fontBase
-                wrapMode: Text.Wrap
+                Layout.minimumHeight: 96
+                Layout.preferredHeight: 180
+                Layout.maximumHeight: 240
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
-                    border.width: parent.activeFocus ? 1 : 0
+                    border.width: contentField.activeFocus ? 1 : 0
                     border.color: Qt.rgba(theme.blue.r, theme.blue.g, theme.blue.b, 0.5)
                 }
-                Keys.onPressed: function(event) {
-                    if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
-                        root.save(); event.accepted = true;
-                    } else {
-                        panel.handleEmacsEdit(contentField, event);
+
+                TextArea {
+                    id: contentField
+                    onTextChanged: root.markDirty()
+                    width: ideaContentScroll.availableWidth
+                    color: theme.text
+                    placeholderTextColor: theme.subtext1
+                    placeholderText: "留空清除"
+                    font.pixelSize: cfg.fontBase
+                    wrapMode: Text.Wrap
+                    background: null
+                    Keys.onPressed: function(event) {
+                        if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                            root.save(); event.accepted = true;
+                        } else {
+                            panel.handleEmacsEdit(contentField, event);
+                        }
                     }
                 }
             }
@@ -764,31 +788,43 @@ Popup {
                 font.pixelSize: cfg.fontTiny
                 Layout.fillWidth: true
             }
-            TextArea {
-                id: logImagesText
-                onTextChanged: root.markDirty()
+            ScrollView {
+                id: logImagesScroll
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(96, Math.max(44, implicitHeight))
-                color: theme.text
-                placeholderTextColor: theme.subtext1
-                placeholderText: "路径或 Ctrl+V 粘贴图片 · 留空清除"
-                font.pixelSize: cfg.fontTiny
-                wrapMode: Text.WrapAnywhere
-                Keys.onPressed: function(event) {
-                    if (clipboardImagePaste.isPasteShortcut(event)) {
-                        clipboardImagePaste.requestPaste(logImagesText, true);
-                        event.accepted = true;
-                    } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
-                        root.save(); event.accepted = true;
-                    } else {
-                        panel.handleEmacsEdit(logImagesText, event);
-                    }
-                }
+                Layout.minimumHeight: 44
+                Layout.preferredHeight: Math.min(96, Math.max(44, logImagesText.implicitHeight))
+                Layout.maximumHeight: 96
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
                 background: Rectangle {
                     radius: 6
                     color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
-                    border.width: parent.activeFocus ? 1 : 0
+                    border.width: logImagesText.activeFocus ? 1 : 0
                     border.color: Qt.rgba(theme.blue.r, theme.blue.g, theme.blue.b, 0.5)
+                }
+
+                TextArea {
+                    id: logImagesText
+                    onTextChanged: root.markDirty()
+                    width: logImagesScroll.availableWidth
+                    color: theme.text
+                    placeholderTextColor: theme.subtext1
+                    placeholderText: "路径或 Ctrl+V 粘贴图片 · 留空清除"
+                    font.pixelSize: cfg.fontTiny
+                    wrapMode: Text.WrapAnywhere
+                    background: null
+                    Keys.onPressed: function(event) {
+                        if (clipboardImagePaste.isPasteShortcut(event)) {
+                            clipboardImagePaste.requestPaste(logImagesText, true);
+                            event.accepted = true;
+                        } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                            root.save(); event.accepted = true;
+                        } else {
+                            panel.handleEmacsEdit(logImagesText, event);
+                        }
+                    }
                 }
             }
         }

@@ -237,11 +237,10 @@ Popup {
                 Layout.fillWidth: true
             }
 
-            Text {
-                text: itemData.description || ""
+            MarkdownText {
+                markdown: itemData.description || ""
                 color: theme.subtext0
                 font.pixelSize: cfg.fontBase
-                wrapMode: Text.WordWrap
                 Layout.fillWidth: true
                 visible: itemData.description !== undefined && itemData.description !== null && itemData.description !== ""
             }
@@ -302,11 +301,10 @@ Popup {
                 Layout.fillWidth: true
             }
 
-            Text {
-                text: itemData.content || ""
+            MarkdownText {
+                markdown: itemData.content || ""
                 color: theme.subtext0
                 font.pixelSize: cfg.fontBase
-                wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
 

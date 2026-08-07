@@ -91,13 +91,15 @@ Item {
         var content = (parsed.content || "").trim();
         if (!content) return { error: "内容不能为空" };
 
-        var cmd = ["starcatch", "log", "add", content];
+        var cmd = ["starcatch", "log", "add"];
         if (parsed.mood) cmd.push("-m", parsed.mood);
         if (parsed.tags.length > 0) cmd.push("-t", parsed.tags.join(","));
         if (parsed.project) cmd.push("-P", parsed.project);
         for (var i = 0; i < images.length; i++) {
             cmd.push("--image", images[i]);
         }
+        // Keep Markdown lines such as "- item" from being parsed as options.
+        cmd.push("--", content);
         return { command: cmd };
     }
 

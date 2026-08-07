@@ -44,6 +44,7 @@ qs -c star-panel ipc call panel toggle
 | 📓 日志列表 | 多行内容与图片缩略图，支持今天 / 近 3 天 / 近 7 天 / 近 30 天筛选 |
 | 👆 条目操作 | 单击查看详情；悬停可直接编辑或复制，键盘操作保持不变 |
 | 📖 长内容 | 详情与编辑表单独立滚动，标题和底部操作始终可见 |
+| 📝 Markdown | 待办描述、灵感内容和日志正文在详情页统一渲染 Markdown |
 | 🚿 快速输入 | 类型切换（📋 待办 / 💭 灵感 / 📓 日志）与主面板双向同步，日志可附加本地图片路径 |
 | 🔄 稳定加载 | 待办 / 灵感 / 日志按类型独立加载，刷新时保留旧列表；失败后可直接重试 |
 | 🛡️ 安全操作 | 删除当前项需要二次确认，关闭编辑弹窗时保护未保存修改 |
@@ -67,6 +68,17 @@ star-panel 面向 Vim / Emacs 用户做了完整键盘路径：
 | Esc 切英文 | 从快速输入 / 搜索 / 编辑弹窗按 `Esc` 退出时，自动把 fcitx5+rime 切到英文（`ascii_mode`） |
 
 完整快捷键说明见 [doc/README.md#43-快捷键](./doc/README.md#43-快捷键)。
+
+## 📝 Markdown 内容
+
+待办描述、灵感内容和日志正文都会在条目详情中使用 Qt 内置 Markdown 渲染；编辑框保留原始 Markdown 文本，便于继续修改。无序列表可以直接按行输入：
+
+```markdown
+- 第一项
+- 第二项
+```
+
+快速输入日志时，面板会在正文前自动加入 `--`，因此正文以 `-` 或 `--` 开头也能正常提交。编辑待办或灵感时，需要使用已修复连字符选项值解析的 Starcatch CLI；旧版可能提示 `unexpected argument '-'`，请升级 Starcatch。问题记录见 [`doc/starcatch-leading-hyphen-value-bug-report.md`](./doc/starcatch-leading-hyphen-value-bug-report.md)。
 
 ## 📎 日志图片
 
