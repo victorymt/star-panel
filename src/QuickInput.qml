@@ -20,6 +20,16 @@ Item {
     // 供列表的 vim `o` 调用：聚焦输入框（进入 insert mode）
     function focusInput() { textInput.forceActiveFocus(); }
 
+    // 底部所有类型切换入口都写入 Panel 的唯一 tab 状态。
+    function setTypeIndex(index) {
+        var len = typeSelector.typeModels.length;
+        if (len === 0) return;
+        var next = Number(index);
+        if (!isFinite(next)) return;
+        next = Math.max(0, Math.min(len - 1, Math.floor(next)));
+        panel.setMainTab(next);
+    }
+
     // 供列表的 vim `:` 调用：进命令模式（设 ":" 自动触发 onTextChanged）
     function enterCommandMode() {
         textInput.text = ":";
@@ -320,7 +330,7 @@ Item {
                             cmdPanel.selectedIndex = (cmdPanel.selectedIndex + (shift ? -1 : 1) + len) % len;
                         } else {
                             var tlen = typeSelector.typeModels.length;
-                            typeSelector.currentIndex = (typeSelector.currentIndex + (shift ? -1 : 1) + tlen) % tlen;
+                            root.setTypeIndex((typeSelector.currentIndex + (shift ? -1 : 1) + tlen) % tlen);
                         }
                     } else if (event.key === Qt.Key_Down && root.cmdMode) {
                         cmdPanel.selectedIndex = Math.min(cmdPanel.selectedIndex + 1, cmdPanel.candidates.length - 1);
@@ -359,9 +369,9 @@ Item {
                             textInput.text = "";
                             root.cmdMode = false;
                             return;
-                        case ":todo": typeSelector.currentIndex = 0; break;
-                        case ":idea": typeSelector.currentIndex = 1; break;
-                        case ":log":  typeSelector.currentIndex = 2; break;
+                        case ":todo": root.setTypeIndex(0); break;
+                        case ":idea": root.setTypeIndex(1); break;
+                        case ":log":  root.setTypeIndex(2); break;
                         case ":open":
                             panel.openCurrentItem();
                             break;
@@ -469,10 +479,7 @@ Item {
                     { type: "idea", label: "💭 灵感", icon: "💭" },
                     { type: "log",  label: "📓 日志", icon: "📓" }
                 ]
-                property int currentIndex: 0
-
-                // Tab / 点击 / :todo|:idea|:log 改类型时，主面板待办/灵感/日志跟着切
-                onCurrentIndexChanged: panel.setMainTab(currentIndex)
+                readonly property int currentIndex: panel.activeTabIndex
 
                 function indexFromType(type) {
                     for (var i = 0; i < typeModels.length; i++) {
@@ -489,7 +496,7 @@ Item {
 
                 flat: true
                 onClicked: {
-                    typeSelector.currentIndex = (typeSelector.currentIndex + 1) % typeSelector.typeModels.length;
+                    root.setTypeIndex((typeSelector.currentIndex + 1) % typeSelector.typeModels.length);
                 }
 
                 background: Rectangle {
@@ -594,7 +601,7 @@ Item {
                     panel.showToast("❌ 捕获失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
                     textInput.text = pendingText;
                     logImageField.text = pendingImages;
-                    typeSelector.currentIndex = typeSelector.indexFromType(pendingType);
+                    root.setTypeIndex(typeSelector.indexFromType(pendingType));
                     root.cmdMode = false;
                     textInput.forceActiveFocus();
                 } else {

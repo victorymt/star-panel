@@ -19,6 +19,7 @@ PanelWindow {
     // ── 尺寸与定位 ──
     readonly property real panelWidth: cfg.panelWidth
     readonly property real panelMargin: cfg.panelMargin
+    property int activeTabIndex: cfg.defaultTab
 
     // 窗口铺满屏幕宽度（透明背景，exclusionMode: Ignore 不占空间），
     // 这样点击面板左侧空白区才能被 MouseArea 捕获 → 关闭面板。
@@ -65,15 +66,17 @@ PanelWindow {
     // ── 切换 tab（vim h/l 用） ──
     function switchTab(delta) {
         var len = tabBar.tabs.length;
-        tabBar.currentIndex = (tabBar.currentIndex + delta + len) % len;
+        setMainTab((tabBar.currentIndex + delta + len) % len);
         focusCurrentList();
     }
 
     // 仅切换主面板 tab，不抢焦点（供快速输入 Tab 切类型时联动）
     function setMainTab(index) {
-        if (index < 0 || index >= tabBar.tabs.length) return;
-        if (tabBar.currentIndex !== index)
-            tabBar.currentIndex = index;
+        var next = Number(index);
+        if (!isFinite(next) || next < 0 || next >= tabBar.tabs.length) return;
+        next = Math.floor(next);
+        if (panel.activeTabIndex !== next)
+            panel.activeTabIndex = next;
     }
 
     // ── 聚焦当前 tab 的列表（vim normal mode 入口） ──
@@ -493,7 +496,7 @@ PanelWindow {
                 id: tabBar
                 Layout.fillWidth: true
                 spacing: 4
-                property int currentIndex: cfg.defaultTab
+                readonly property int currentIndex: panel.activeTabIndex
 
                 property var tabs: [
                     { label: "📋 待办" },
@@ -510,7 +513,7 @@ PanelWindow {
 
                         Layout.fillWidth: true
                         flat: true
-                        onClicked: tabBar.currentIndex = index
+                        onClicked: panel.setMainTab(index)
 
                         contentItem: Text {
                             text: modelData.label
@@ -984,19 +987,19 @@ PanelWindow {
         onActivated: panel.closeTopOrSelf()
     }
 
-    Shortcut { sequence: "Ctrl+1"; enabled: panelVisible; onActivated: tabBar.currentIndex = 0 }
-    Shortcut { sequence: "Ctrl+2"; enabled: panelVisible; onActivated: tabBar.currentIndex = 1 }
-    Shortcut { sequence: "Ctrl+3"; enabled: panelVisible; onActivated: tabBar.currentIndex = 2 }
+    Shortcut { sequence: "Ctrl+1"; enabled: panelVisible; onActivated: panel.setMainTab(0) }
+    Shortcut { sequence: "Ctrl+2"; enabled: panelVisible; onActivated: panel.setMainTab(1) }
+    Shortcut { sequence: "Ctrl+3"; enabled: panelVisible; onActivated: panel.setMainTab(2) }
 
     Shortcut {
         sequence: "Ctrl+Tab"
         enabled: panelVisible
-        onActivated: tabBar.currentIndex = (tabBar.currentIndex + 1) % tabBar.tabs.length
+        onActivated: panel.setMainTab((tabBar.currentIndex + 1) % tabBar.tabs.length)
     }
     Shortcut {
         sequence: "Ctrl+Shift+Tab"
         enabled: panelVisible
-        onActivated: tabBar.currentIndex = (tabBar.currentIndex - 1 + tabBar.tabs.length) % tabBar.tabs.length
+        onActivated: panel.setMainTab((tabBar.currentIndex - 1 + tabBar.tabs.length) % tabBar.tabs.length)
     }
 
     // ── 搜索快捷 ──
