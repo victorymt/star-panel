@@ -212,6 +212,7 @@ PanelWindow {
         deleteProc.pendingType = type;
         deleteProc.onSuccess = onSuccess || null;
         deleteProc.command = StarcatchCommands.deleteCommand(cfg.starcatchPath, type, id);
+        deleteProc.timedOut = false;
         deleteProc.running = true;
     }
 
@@ -684,13 +685,20 @@ PanelWindow {
         running: false
         property string pendingType: ""
         property var onSuccess: null
+        property bool timedOut: false
         stdout: StdioCollector {}
         stderr: StdioCollector { id: deleteStderr }
         onExited: function(exitCode, exitStatus) {
+            var timedOut = deleteProc.timedOut;
+            deleteProc.timedOut = false;
             var t = pendingType;
             var cb = onSuccess;
             pendingType = "";
             onSuccess = null;
+
+            if (timedOut) {
+                return;
+            }
 
             if (exitCode !== 0) {
                 var detail = deleteStderr.text.trim();
@@ -701,6 +709,14 @@ PanelWindow {
             showToast("🗑️  已删除");
             if (typeof cb === "function") cb();
             if (t) reloadData(t);
+        }
+    }
+
+    ProcessGuard {
+        process: deleteProc
+        onTimeout: {
+            deleteProc.timedOut = true;
+            showToast("❌ 删除超时，请检查 Starcatch 是否运行");
         }
     }
 

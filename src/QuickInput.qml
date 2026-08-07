@@ -396,6 +396,7 @@ Item {
                             root.pipeHelperPath, cfg.starcatchPath, type, inputText
                         );
                     }
+                    pipeProc.timedOut = false;
                     pipeProc.running = true;
 
                     textInput.text = "";
@@ -528,17 +529,17 @@ Item {
             property string pendingType: ""
             property string pendingText: ""
             property string pendingImages: ""
+                property bool timedOut: false
             stdout: StdioCollector {}
             stderr: StdioCollector { id: pipeStderr }
             onExited: function(exitCode, exitStatus) {
+                var timedOut = pipeProc.timedOut;
+                pipeProc.timedOut = false;
+                if (timedOut) return;
                 if (exitCode !== 0) {
                     var detail = pipeStderr.text.trim();
                     panel.showToast("❌ 捕获失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
-                    textInput.text = pendingText;
-                    logImageField.text = pendingImages;
-                    root.setTypeIndex(typeSelector.indexFromType(pendingType));
-                    root.cmdMode = false;
-                    textInput.forceActiveFocus();
+                    restorePendingPipeInput();
                 } else {
                     if (pendingType === "log") clipboardImagePaste.cleanupAll();
                     panel.showToast("✨ 已捕获");
@@ -548,6 +549,26 @@ Item {
                 pendingText = "";
                 pendingImages = "";
             }
+        }
+
+        ProcessGuard {
+            process: pipeProc
+            onTimeout: {
+                pipeProc.timedOut = true;
+                panel.showToast("❌ 捕获超时，请检查 Starcatch 是否运行");
+                restorePendingPipeInput();
+            }
+        }
+
+        function restorePendingPipeInput() {
+            textInput.text = pipeProc.pendingText;
+            logImageField.text = pipeProc.pendingImages;
+            root.setTypeIndex(typeSelector.indexFromType(pipeProc.pendingType));
+            root.cmdMode = false;
+            pipeProc.pendingType = "";
+            pipeProc.pendingText = "";
+            pipeProc.pendingImages = "";
+            textInput.forceActiveFocus();
         }
     }
 }

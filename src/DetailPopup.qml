@@ -753,13 +753,19 @@ Popup {
     Process {
         id: actionProc
         running: false
+        property bool timedOut: false
         stdout: StdioCollector {}
         stderr: StdioCollector {
             id: actionStderr
         }
         onExited: function(exitCode, exitStatus) {
+            var timedOut = actionProc.timedOut;
+            actionProc.timedOut = false;
             var t = root.pendingReload;
             root.pendingReload = "";
+            if (timedOut) {
+                return;
+            }
             if (exitCode !== 0) {
                 var detail = actionStderr.text.trim();
                 panel.showToast("❌ 操作失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
@@ -769,6 +775,14 @@ Popup {
             root.close();
             panel.showToast("✅ 操作成功", "success");
             if (t) panel.reloadData(t);
+        }
+    }
+
+    ProcessGuard {
+        process: actionProc
+        onTimeout: {
+            actionProc.timedOut = true;
+            panel.showToast("❌ 操作超时，请检查 Starcatch 是否运行");
         }
     }
 
@@ -782,6 +796,7 @@ Popup {
         actionProc.command = StarcatchCommands.todoActionCommand(
             cfg.starcatchPath, cmd, itemData.id
         );
+        actionProc.timedOut = false;
         actionProc.running = true;
     }
 }

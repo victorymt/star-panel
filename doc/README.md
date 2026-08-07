@@ -53,6 +53,7 @@ ShellRoot (shell.qml)
       ├── EntryInput            ←── 日志输入解析和图片路径规范化
       ├── EditorKeys            ←── Emacs 文本编辑快捷键变换
       ├── EntryMapper           ←── Starcatch JSON 解析和条目映射
+      ├── ProcessGuard          ←── 异步进程超时和取消
       ├── Rectangle (背景面板)  ←── 半透明浮动卡片
       │    ├── Header        ⭐ 星捕 + 加载状态 + ↻ 刷新 + ⚙ 设置 + ? 帮助 + ✕ 关闭
       │    ├── TabBar        📋待办 │ 💭灵感 │ 📓日志
@@ -110,6 +111,7 @@ starcatch log add --help | grep -- --image  # 日志图片需要新版 CLI
     ├── EntryInput.js      日志输入解析和图片路径规范化
     ├── EditorKeys.js      Emacs 文本编辑快捷键变换
     ├── EntryMapper.js     Starcatch JSON 解析和条目映射
+    ├── ProcessGuard.qml   异步进程超时和取消
     ├── TodoList.qml       待办列表
     ├── IdeaList.qml       灵感列表
     ├── LogList.qml        日志列表
@@ -296,6 +298,7 @@ qs -c star-panel ipc call panel hide
 - `visible` 条件控制: `panelVisible || slideOffset > -(panelWidth + panelMargin * 2)`
 - 面板通过 `ColumnLayout` 垂直布局: 头部 → 选项卡 → 分隔线 → 内容区 → 快速输入
 - 通过 `ReloadCoordinator.qml` 管理三类列表的并行加载、独立加载/错误状态、15 秒超时和排队刷新；刷新失败不会清空已有数据
+- 快速捕获、编辑、删除、Todo 动作和剪贴板图片助手由 `ProcessGuard.qml` 统一设置 15 秒超时；超时会停止进程并保留可重试的输入/编辑状态
 - 删除命令绑定当前类型与 ID 进行二次确认；编辑弹窗关闭前会确认是否丢弃未保存修改
 
 ### TodoList.qml

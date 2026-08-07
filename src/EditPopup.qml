@@ -95,6 +95,7 @@ Popup {
         loadProc.command = StarcatchCommands.showCommand(
             cfg.starcatchPath, root.type, root.itemId
         );
+        loadProc.timedOut = false;
         loadProc.running = true;
     }
 
@@ -208,6 +209,7 @@ Popup {
         }
         saveProc.pendingReload = root.type;
         saveProc.command = cmd;
+        saveProc.timedOut = false;
         saveProc.running = true;
     }
 
@@ -215,10 +217,17 @@ Popup {
     Process {
         id: loadProc
         running: false
+        property bool timedOut: false
         stdout: StdioCollector { id: loadStdout }
         stderr: StdioCollector { id: loadStderr }
         onExited: function(exitCode, exitStatus) {
+            var timedOut = loadProc.timedOut;
+            loadProc.timedOut = false;
             root.loading = false;
+
+            if (timedOut) {
+                return;
+            }
 
             if (exitCode !== 0) {
                 root.hydrating = false;
@@ -249,11 +258,17 @@ Popup {
         id: saveProc
         running: false
         property string pendingReload: ""
+        property bool timedOut: false
         stdout: StdioCollector {}
         stderr: StdioCollector { id: saveStderr }
         onExited: function(exitCode, exitStatus) {
+            var timedOut = saveProc.timedOut;
+            saveProc.timedOut = false;
             var t = saveProc.pendingReload;
             saveProc.pendingReload = "";
+            if (timedOut) {
+                return;
+            }
             if (exitCode !== 0) {
                 var detail = saveStderr.text.trim();
                 panel.showToast("❌ 保存失败" + (detail ? "：" + detail.split("\n")[0] : "（退出码 " + exitCode + "）"));
@@ -265,6 +280,24 @@ Popup {
             clipboardImagePaste.cleanupAll();
             root.close();
             if (t) panel.reloadData(t);
+        }
+    }
+
+    ProcessGuard {
+        process: loadProc
+        onTimeout: {
+            loadProc.timedOut = true;
+            root.loading = false;
+            root.hydrating = false;
+            root.loadError = "加载超时，请检查 Starcatch 是否运行";
+        }
+    }
+
+    ProcessGuard {
+        process: saveProc
+        onTimeout: {
+            saveProc.timedOut = true;
+            panel.showToast("❌ 保存超时，请检查 Starcatch 是否运行");
         }
     }
 

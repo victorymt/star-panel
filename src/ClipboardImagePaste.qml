@@ -59,6 +59,7 @@ Item {
         root.acceptImageForRequest = acceptImage;
         root.captureStarted = false;
         captureProc.command = [root.helperPath, "capture", root.stagingDir];
+        captureProc.timedOut = false;
         startGuard.restart();
         captureProc.running = true;
     }
@@ -100,6 +101,7 @@ Item {
     Process {
         id: captureProc
         running: false
+        property bool timedOut: false
         stdout: StdioCollector { id: captureStdout }
         stderr: StdioCollector { id: captureStderr }
 
@@ -109,7 +111,10 @@ Item {
         }
 
         onExited: function(exitCode, exitStatus) {
+            var timedOut = captureProc.timedOut;
+            captureProc.timedOut = false;
             startGuard.stop();
+            if (timedOut) return;
             if (exitCode === 0) {
                 var path = captureStdout.text.trim();
                 root.fallbackTarget = null;
@@ -144,6 +149,19 @@ Item {
             root.fallbackTarget = null;
             var detail = captureStderr.text.trim();
             root.showToast("❌ " + (detail ? detail.split("\n")[0] : "读取剪贴板图片失败"));
+        }
+    }
+
+    ProcessGuard {
+        process: captureProc
+        onTimeout: {
+            captureProc.timedOut = true;
+            startGuard.stop();
+            if (Quickshell.clipboardText !== "") root.fallbackToTextPaste();
+            else {
+                root.fallbackTarget = null;
+                root.showToast("❌ 读取剪贴板图片超时");
+            }
         }
     }
 }
