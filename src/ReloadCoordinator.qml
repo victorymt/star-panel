@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "EntryMapper.js" as EntryMapper
 import "StarcatchCommands.js" as StarcatchCommands
 
 /// ReloadCoordinator — Starcatch 三类数据的并行刷新、超时和结果映射。
@@ -132,14 +133,6 @@ Item {
         return trimmed ? trimmed.split("\n")[0] : "";
     }
 
-    function parseListJson(text) {
-        var value = JSON.parse((text || "").trim());
-        if (!Array.isArray(value)) {
-            throw new Error("expected JSON array");
-        }
-        return value;
-    }
-
     function emptyMessage(type) {
         if (type === "todo") return "待办数据为空，请确认 Starcatch 可用";
         if (type === "idea") return "灵感数据为空，请确认 Starcatch 可用";
@@ -204,10 +197,10 @@ Item {
         }
 
         try {
-            var raw = parseListJson(out);
-            if (type === "todo") setFetchItems(type, mapTodos(raw));
-            else if (type === "idea") setFetchItems(type, mapIdeas(raw));
-            else setFetchItems(type, mapLogs(raw));
+            var raw = EntryMapper.parseListJson(out);
+            if (type === "todo") setFetchItems(type, EntryMapper.mapTodos(raw));
+            else if (type === "idea") setFetchItems(type, EntryMapper.mapIdeas(raw));
+            else setFetchItems(type, EntryMapper.mapLogs(raw));
             setFetchError(type, "");
         } catch (e) {
             setFetchError(type, parseFailureMessage(type, e));
@@ -299,76 +292,4 @@ Item {
         }
     }
 
-    // ── JSON 解析辅助 ──
-    function parseJson(text) {
-        try { return JSON.parse(text.trim()); } catch(e) { return []; }
-    }
-
-    function formatDate(iso) {
-        if (!iso) return "";
-        var parts = iso.split("T");
-        if (parts.length < 2) return parts[0] || "";
-        return parts[0].slice(5) + " " + parts[1].slice(0, 5);
-    }
-
-    // ── Todo JSON 映射 ──
-    function mapTodos(raw) {
-        var priorityIcon = { "P0": "🔴", "P1": "🟡", "P2": "🟢", "P3": "⚪" };
-        var statusIcon = { "Pending": "⬜", "Done": "✅", "Archived": "📦" };
-        return raw.map(function(item) {
-            return {
-                id: item.id,
-                rawStatus: item.status,
-                priority: priorityIcon[item.priority] || "🟢",
-                status: statusIcon[item.status] || "⬜",
-                title: item.title,
-                description: item.description || "",
-                tags: item.tags || [],
-                due: item.due_date || "-"
-            };
-        });
-    }
-
-    function parseTodos(text) {
-        return mapTodos(parseJson(text));
-    }
-
-    // ── Idea JSON 映射 ──
-    function mapIdeas(raw) {
-        return raw.map(function(item) {
-            var time = formatDate(item.created_at);
-            var subtitle = item.source ? "from: " + item.source + " · " + time : time;
-            return {
-                id: item.id,
-                title: item.title,
-                content: item.content || subtitle,
-                tags: item.tags || [],
-                time: time,
-                source: item.source || "?"
-            };
-        });
-    }
-
-    function parseIdeas(text) {
-        return mapIdeas(parseJson(text));
-    }
-
-    // ── Log JSON 映射 ──
-    function mapLogs(raw) {
-        return raw.map(function(item) {
-            var time = formatDate(item.created_at);
-            return {
-                id: item.id,
-                title: time + (item.mood ? " · " + item.mood : ""),
-                content: item.content,
-                tags: item.tags || [],
-                images: item.images || [],
-                time: time
-            };
-        });
-    }
-
-    function parseLogs(text) {
-        return mapLogs(parseJson(text));
-    }
 }

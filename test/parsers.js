@@ -5,63 +5,26 @@ const StarcatchCommands = require("../src/StarcatchCommands.js");
 const CommandRouter = require("../src/CommandRouter.js");
 const EntryInput = require("../src/EntryInput.js");
 const EditorKeys = require("../src/EditorKeys.js");
+const EntryMapper = require("../src/EntryMapper.js");
 
 function parseJson(text) {
-  try { return JSON.parse(text.trim()); } catch(e) { return []; }
+  return EntryMapper.parseJson(text);
 }
 
 function formatDate(iso) {
-  if (!iso) return "";
-  var parts = iso.split("T");
-  if (parts.length < 2) return parts[0] || "";
-  return parts[0].slice(5) + " " + parts[1].slice(0, 5);
+  return EntryMapper.formatDate(iso);
 }
 
 function parseTodos(text) {
-  var raw = parseJson(text);
-  var priorityIcon = { "P0": "🔴", "P1": "🟡", "P2": "🟢", "P3": "⚪" };
-  var statusIcon = { "Pending": "⬜", "Done": "✅", "Archived": "📦" };
-  return raw.map(function(item) {
-    return {
-      id: item.id,
-      rawStatus: item.status,
-      priority: priorityIcon[item.priority] || "🟢",
-      status: statusIcon[item.status] || "⬜",
-      title: item.title,
-      description: item.description || "",
-      tags: item.tags || [],
-      due: item.due_date || "-"
-    };
-  });
+  return EntryMapper.parseTodos(text);
 }
 
 function parseIdeas(text) {
-  var raw = parseJson(text);
-  return raw.map(function(item) {
-    var time = formatDate(item.created_at);
-    var subtitle = item.source ? "from: " + item.source + " · " + time : time;
-    return {
-      title: item.title,
-      content: item.content || subtitle,
-      tags: item.tags || [],
-      time: time,
-      source: item.source || "?"
-    };
-  });
+  return EntryMapper.parseIdeas(text);
 }
 
 function parseLogs(text) {
-  var raw = parseJson(text);
-  return raw.map(function(item) {
-    var time = formatDate(item.created_at);
-    return {
-      title: time + (item.mood ? " · " + item.mood : ""),
-      content: item.content,
-      tags: item.tags || [],
-      images: item.images || [],
-      time: time
-    };
-  });
+  return EntryMapper.parseLogs(text);
 }
 
 function shellQuote(s) {
@@ -124,9 +87,7 @@ function listLabel(type) {
 }
 
 function parseListJson(text) {
-  var value = JSON.parse((text || "").trim());
-  if (!Array.isArray(value)) throw new Error("expected JSON array");
-  return value;
+  return EntryMapper.parseListJson(text);
 }
 
 function listFetchResult(type, exitCode, stdoutText, stderrText) {

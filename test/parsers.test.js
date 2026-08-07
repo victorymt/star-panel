@@ -91,6 +91,7 @@ test("parseIdeas with source", () => {
   ]);
   const ideas = parseIdeas(ideaInput);
   assert.strictEqual(ideas.length, 2);
+  assert.strictEqual(ideas[0].id, "1");
   assert.strictEqual(ideas[0].title, "Great idea");
   assert.strictEqual(ideas[0].content, "Details");
   assert.strictEqual(ideas[0].source, "chat");
@@ -108,6 +109,7 @@ test("parseLogs with mood", () => {
   ]);
   const logs = parseLogs(logInput);
   assert.strictEqual(logs.length, 2);
+  assert.strictEqual(logs[0].id, "1");
   assert.strictEqual(logs[0].content, "Today was good");
   assert.strictEqual(logs[0].title, "06-27 20:00 · 😊");
   assert.deepStrictEqual(logs[0].tags, ["life"]);
