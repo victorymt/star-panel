@@ -66,7 +66,9 @@ fi
 # ── 5. JS 单元与命令集成测试 ──
 echo "=== 5. JS 单元与命令集成测试 ==="
 if command -v node &>/dev/null; then
-  if node test/parsers.test.js 2>&1 && node test/starcatch_commands.test.js 2>&1; then
+  if node test/parsers.test.js 2>&1 \
+      && node test/starcatch_commands.test.js 2>&1 \
+      && node test/command_router.test.js 2>&1; then
     pass "JS 测试通过"
   else
     fail "JS 测试失败"

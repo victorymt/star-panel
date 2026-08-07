@@ -2,6 +2,7 @@
 // These have no QML/Quickshell runtime dependencies.
 
 const StarcatchCommands = require("../src/StarcatchCommands.js");
+const CommandRouter = require("../src/CommandRouter.js");
 
 function parseJson(text) {
   try { return JSON.parse(text.trim()); } catch(e) { return []; }
@@ -270,19 +271,14 @@ function editLoadResult(exitCode, stdoutText, stderrText) {
 }
 
 function commandAction(name, currentTab) {
-  switch (name) {
-    case ":open": return "openCurrent";
-    case ":e":
-    case ":edit": return "editCurrent";
-    case ":d":
-    case ":delete": return "deleteCurrent";
-    case ":done":
-    case ":archive":
-    case ":reopen": return currentTab === "todo" ? name.slice(1) : "todoOnly";
-    case ":r":
-    case ":reload": return "reloadAll";
-    default: return "unknown";
-  }
+  var action = CommandRouter.resolve(name);
+  if (action.type === "open") return "openCurrent";
+  if (action.type === "edit") return "editCurrent";
+  if (action.type === "delete") return "deleteCurrent";
+  if (action.type === "todoAction")
+    return currentTab === "todo" ? action.action : "todoOnly";
+  if (action.type === "reload") return "reloadAll";
+  return "unknown";
 }
 
 function normalModeAction(key, modifiers) {
