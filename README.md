@@ -17,6 +17,8 @@ qs -c star-panel ipc call panel toggle
 # Super + I → qs -c star-panel ipc call panel toggle
 ```
 
+提交前可运行 `bash test/validate.sh` 做不重启面板的完整检查；`test/smoke_test.sh` 会主动停止并重启 Quickshell，仅适合明确需要验证运行中实例时使用。
+
 ## 📂 项目结构
 
 ```

@@ -440,6 +440,9 @@ cd /data/project/star-panel
 # 前台启动查看日志
 quickshell -c star-panel -v
 
+# 提交前验证（不会停止或重启当前 Quickshell）
+bash test/validate.sh
+
 # 修改后无需重启 QS（Quickshell 支持热重载）
 killall quickshell && quickshell -c star-panel --daemonize
 ```
