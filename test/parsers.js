@@ -6,6 +6,7 @@ const CommandRouter = require("../src/CommandRouter.js");
 const EntryInput = require("../src/EntryInput.js");
 const EditorKeys = require("../src/EditorKeys.js");
 const EntryMapper = require("../src/EntryMapper.js");
+const ListNavigation = require("../src/ListNavigation.js");
 
 function parseJson(text) {
   return EntryMapper.parseJson(text);
@@ -258,8 +259,7 @@ function inlineImageSummary(images, maxVisible) {
 }
 
 function pageRowCount(viewHeight, currentRowHeight, fraction) {
-  var rowHeight = Math.max(1, currentRowHeight || 56);
-  return Math.max(1, Math.floor((viewHeight / rowHeight) * fraction));
+  return ListNavigation.pageRowCount(viewHeight, currentRowHeight, fraction);
 }
 
 module.exports = {
@@ -294,5 +294,7 @@ module.exports = {
   normalizeLogFilterDays,
   logListCommand,
   inlineImageSummary,
-  pageRowCount
+  pageRowCount,
+  moveIndex: ListNavigation.moveIndex,
+  restoreIndex: ListNavigation.restoreIndex
 };

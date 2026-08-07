@@ -28,6 +28,7 @@ qs -c star-panel ipc call panel toggle
 │   ├── EditorKeys.js      ←── Emacs 文本编辑快捷键变换
 │   ├── EntryMapper.js     ←── Starcatch JSON 解析与条目映射
 │   ├── ProcessGuard.qml   ←── 异步进程超时与取消
+│   ├── ListNavigation.js  ←── 列表索引、分页和高亮恢复
 │   ├── SettingsPanel.qml  ←── 设置面板（主题 / 面板宽度 / 界面缩放）
 │   ├── TodoList.qml       ←── 待办
 │   ├── IdeaList.qml       ←── 灵感

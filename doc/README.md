@@ -54,6 +54,7 @@ ShellRoot (shell.qml)
       ├── EditorKeys            ←── Emacs 文本编辑快捷键变换
       ├── EntryMapper           ←── Starcatch JSON 解析和条目映射
       ├── ProcessGuard          ←── 异步进程超时和取消
+      ├── ListNavigation        ←── 列表索引、分页和高亮恢复
       ├── Rectangle (背景面板)  ←── 半透明浮动卡片
       │    ├── Header        ⭐ 星捕 + 加载状态 + ↻ 刷新 + ⚙ 设置 + ? 帮助 + ✕ 关闭
       │    ├── TabBar        📋待办 │ 💭灵感 │ 📓日志
@@ -112,6 +113,7 @@ starcatch log add --help | grep -- --image  # 日志图片需要新版 CLI
     ├── EditorKeys.js      Emacs 文本编辑快捷键变换
     ├── EntryMapper.js     Starcatch JSON 解析和条目映射
     ├── ProcessGuard.qml   异步进程超时和取消
+    ├── ListNavigation.js  列表索引、分页和高亮恢复
     ├── TodoList.qml       待办列表
     ├── IdeaList.qml       灵感列表
     ├── LogList.qml        日志列表

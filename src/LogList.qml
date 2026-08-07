@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import "ListNavigation.js" as ListNavigation
 
 /// LogList — 日志列表组件
 Item {
@@ -72,14 +73,16 @@ Item {
 
     function moveByRows(delta) {
         if (listView.model.length === 0) return;
-        listView.currentIndex = Math.max(0, Math.min(listView.model.length - 1, listView.currentIndex + delta));
+        listView.currentIndex = ListNavigation.moveIndex(
+            listView.currentIndex, delta, listView.model.length
+        );
         listView.positionViewAtIndex(listView.currentIndex, ListView.Contain);
         root._trackCurrent();
     }
 
     function movePage(direction, fraction) {
         var currentHeight = listView.currentItem ? listView.currentItem.height + listView.spacing : 56;
-        var rows = Math.max(1, Math.floor((listView.height / Math.max(1, currentHeight)) * fraction));
+        var rows = ListNavigation.pageRowCount(listView.height, currentHeight, fraction);
         moveByRows(direction * rows);
     }
 
@@ -315,17 +318,7 @@ Item {
             var targetId = root.currentItemId;
             var oldIndex = root.lastIndex;
             Qt.callLater(function() {
-                var idx = -1;
-                for (var i = 0; i < model.length; i++) {
-                    if (model[i] && model[i].id === targetId) { idx = i; break; }
-                }
-                if (idx >= 0) {
-                    currentIndex = idx;
-                } else if (oldIndex >= model.length) {
-                    currentIndex = Math.max(0, model.length - 1);
-                } else {
-                    currentIndex = oldIndex;
-                }
+                currentIndex = ListNavigation.restoreIndex(model, targetId, oldIndex);
                 if (savedY <= contentHeight - height + spacing)
                     contentY = savedY;
                 else

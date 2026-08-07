@@ -31,7 +31,9 @@ const {
   normalizeLogFilterDays,
   logListCommand,
   inlineImageSummary,
-  pageRowCount
+  pageRowCount,
+  moveIndex,
+  restoreIndex
 } = require("./parsers");
 
 let passed = 0;
@@ -491,6 +493,19 @@ test("pageRowCount accounts for thumbnail-expanded rows", () => {
   assert.strictEqual(pageRowCount(600, 60, 1), 10);
   assert.strictEqual(pageRowCount(600, 120, 1), 5);
   assert.strictEqual(pageRowCount(600, 120, 0.5), 2);
+});
+test("moveIndex clamps navigation to list bounds", () => {
+  assert.strictEqual(moveIndex(0, -1, 3), 0);
+  assert.strictEqual(moveIndex(1, 1, 3), 2);
+  assert.strictEqual(moveIndex(2, 4, 3), 2);
+  assert.strictEqual(moveIndex(0, 1, 0), 0);
+});
+test("restoreIndex prefers item id and clamps fallback index", () => {
+  const items = [{id: "a"}, {id: "b"}, {id: "c"}];
+  assert.strictEqual(restoreIndex(items, "b", 0), 1);
+  assert.strictEqual(restoreIndex(items, "gone", 99), 2);
+  assert.strictEqual(restoreIndex(items, "gone", -1), 0);
+  assert.strictEqual(restoreIndex([], "gone", 4), 0);
 });
 
 // ── All done ──

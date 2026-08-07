@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import "ListNavigation.js" as ListNavigation
 
 /// TodoList — 待办列表组件
 Item {
@@ -93,13 +94,15 @@ Item {
 
     function moveByRows(delta) {
         if (listView.model.length === 0) return;
-        listView.currentIndex = Math.max(0, Math.min(listView.model.length - 1, listView.currentIndex + delta));
+        listView.currentIndex = ListNavigation.moveIndex(
+            listView.currentIndex, delta, listView.model.length
+        );
         listView.positionViewAtIndex(listView.currentIndex, ListView.Contain);
         root._trackCurrent();
     }
 
     function movePage(direction, fraction) {
-        var rows = Math.max(1, Math.floor((listView.height / 56) * fraction));
+        var rows = ListNavigation.pageRowCount(listView.height, 56, fraction);
         moveByRows(direction * rows);
     }
 
@@ -325,17 +328,7 @@ Item {
             var targetId = root.currentItemId;
             var oldIndex = root.lastIndex;
             Qt.callLater(function() {
-                var idx = -1;
-                for (var i = 0; i < model.length; i++) {
-                    if (model[i] && model[i].id === targetId) { idx = i; break; }
-                }
-                if (idx >= 0) {
-                    currentIndex = idx;
-                } else if (oldIndex >= model.length) {
-                    currentIndex = Math.max(0, model.length - 1);
-                } else {
-                    currentIndex = oldIndex;
-                }
+                currentIndex = ListNavigation.restoreIndex(model, targetId, oldIndex);
                 if (savedY <= contentHeight - height + spacing)
                     contentY = savedY;
                 else
