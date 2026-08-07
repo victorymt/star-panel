@@ -297,46 +297,55 @@ Item {
                     }
                 }
 
-                function executeCommand(cmd) {
-                    var action = CommandRouter.resolve(cmd);
-                    if (action.type === "close") {
-                        panel.panelVisible = false;
-                    } else if (action.type === "reload") {
-                        panel.reloadData();
-                        panel.showToast("🔄 刷新中...");
-                    } else if (action.type === "settings") {
-                        if (settingsPanel.visible) settingsPanel.close();
-                        else settingsPanel.open();
-                        textInput.text = "";
-                        root.cmdMode = false;
-                        return;
-                    } else if (action.type === "setType") {
-                        root.setTypeIndex(action.index);
-                    } else if (action.type === "open") {
-                        panel.openCurrentItem();
-                    } else if (action.type === "edit") {
-                        panel.editCurrentItem();
-                    } else if (action.type === "delete") {
-                        panel.deleteCurrentItem();
-                    } else if (action.type === "copy") {
-                        panel.copyCurrentItem();
-                    } else if (action.type === "todoAction") {
-                        panel.runCurrentTodoAction(action.action);
-                    } else if (action.type === "help") {
-                        panel.openHelp();
-                        textInput.text = "";
-                        root.cmdMode = false;
-                        return;
-                    } else {
-                        panel.showToast("⚠️ 未知命令 " + action.name + " · :help 查看全部");
-                        textInput.text = "";
-                        root.cmdMode = false;
-                        textInput.forceActiveFocus();
-                        return;
-                    }
+                function clearCommandInput(restoreFocus) {
                     textInput.text = "";
                     root.cmdMode = false;
-                    textInput.forceActiveFocus();
+                    if (restoreFocus) textInput.forceActiveFocus();
+                }
+
+                function executeCommand(cmd) {
+                    var action = CommandRouter.resolve(cmd);
+                    switch (action.type) {
+                    case "close":
+                        panel.panelVisible = false;
+                        break;
+                    case "reload":
+                        panel.reloadData();
+                        panel.showToast("🔄 刷新中...");
+                        break;
+                    case "settings":
+                        if (settingsPanel.visible) settingsPanel.close();
+                        else settingsPanel.open();
+                        clearCommandInput(false);
+                        return;
+                    case "setType":
+                        root.setTypeIndex(action.index);
+                        break;
+                    case "open":
+                        panel.openCurrentItem();
+                        break;
+                    case "edit":
+                        panel.editCurrentItem();
+                        break;
+                    case "delete":
+                        panel.deleteCurrentItem();
+                        break;
+                    case "copy":
+                        panel.copyCurrentItem();
+                        break;
+                    case "todoAction":
+                        panel.runCurrentTodoAction(action.action);
+                        break;
+                    case "help":
+                        panel.openHelp();
+                        clearCommandInput(false);
+                        return;
+                    default:
+                        panel.showToast("⚠️ 未知命令 " + action.name + " · :help 查看全部");
+                        clearCommandInput(true);
+                        return;
+                    }
+                    clearCommandInput(true);
                 }
 
                 function executeSelected() {
