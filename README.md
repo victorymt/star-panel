@@ -142,3 +142,5 @@ output_path = "~/.config/star-panel/theme.json"
 > 🎯 需要 [Starcatch](https://github.com/your/starcatch) CLI + [Quickshell](https://github.com/Quickshell/Quickshell) ≥ 0.3.0 + `wl-clipboard`
 >
 > 🌟 溯星逆流追寻星渺
+
+如 `starcatch` 不在 `PATH` 中，可在启动面板前设置 `STARCATCH_BIN=/path/to/starcatch`。

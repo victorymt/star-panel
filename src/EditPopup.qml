@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import "StarcatchCommands.js" as StarcatchCommands
 
 /// EditPopup — 条目编辑弹窗
 /// 列表上按 e 触发：starcatch --json <type> show 回填表单，
@@ -90,7 +91,9 @@ Popup {
         root.hydrating = true;
         root.loadError = "";
         root.loading = true;
-        loadProc.command = ["starcatch", "--json", root.type, "show", root.itemId];
+        loadProc.command = StarcatchCommands.showCommand(
+            cfg.starcatchPath, root.type, root.itemId
+        );
         loadProc.running = true;
     }
 
@@ -177,42 +180,46 @@ Popup {
         if (root.type === "todo") {
             var title = titleField.text.trim();
             if (!title) { panel.showToast("⚠️ 标题不能为空"); return; }
-            cmd = ["starcatch", "todo", "edit", root.itemId,
-                   "--title", title,
-                   "--desc", descField.text,
-                   "-p", root.priorityValue,
-                   "--due", dueField.text.trim(),
-                   "-t", tagsField.text.trim(),
-                   "-P", projectField.text.trim()];
+            cmd = StarcatchCommands.todoEditCommand(cfg.starcatchPath, root.itemId, {
+                title: title,
+                description: descField.text,
+                priority: root.priorityValue,
+                due: dueField.text.trim(),
+                tags: tagsField.text.trim(),
+                project: projectField.text.trim()
+            });
         } else if (root.type === "idea") {
             var ititle = ideaTitleField.text.trim();
             if (!ititle) { panel.showToast("⚠️ 标题不能为空"); return; }
-            cmd = ["starcatch", "idea", "edit", root.itemId,
-                   "--title", ititle,
-                   "-c", contentField.text,
-                   "-s", sourceField.text.trim(),
-                   "-t", ideaTagsField.text.trim(),
-                   "-P", ideaProjectField.text.trim()];
+            cmd = StarcatchCommands.ideaEditCommand(cfg.starcatchPath, root.itemId, {
+                title: ititle,
+                content: contentField.text,
+                source: sourceField.text.trim(),
+                tags: ideaTagsField.text.trim(),
+                project: ideaProjectField.text.trim()
+            });
         } else {
             var content = logContentField.text.trim();
             if (!content) { panel.showToast("⚠️ 内容不能为空"); return; }
-            cmd = ["starcatch", "log", "edit", root.itemId,
-                   "-c", content,
-                   "-m", moodField.text.trim(),
-                   "-t", logTagsField.text.trim(),
-                   "-P", logProjectField.text.trim()];
+            var imageArgs = [];
             var originalImages = root.normalizeImageText(root.originalLogImagesText);
             var currentImages = root.normalizeImageText(logImagesText.text);
             if (currentImages !== originalImages) {
                 var imagePaths = root.splitImagePaths(logImagesText.text);
                 if (imagePaths.length === 0) {
-                    cmd.push("--clear-images");
+                    imageArgs.push("--clear-images");
                 } else {
                     for (var i = 0; i < imagePaths.length; i++) {
-                        cmd.push("--image", imagePaths[i]);
+                        imageArgs.push("--image", imagePaths[i]);
                     }
                 }
             }
+            cmd = StarcatchCommands.logEditCommand(cfg.starcatchPath, root.itemId, {
+                content: content,
+                mood: moodField.text.trim(),
+                tags: logTagsField.text.trim(),
+                project: logProjectField.text.trim()
+            }, imageArgs);
         }
         saveProc.pendingReload = root.type;
         saveProc.command = cmd;

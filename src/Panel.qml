@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import "StarcatchCommands.js" as StarcatchCommands
 
 /// StarPanel — 负一屏主窗口
 /// 从右侧滑出，展示 Starcatch 的三类数据：Todo / Idea / Log
@@ -226,7 +227,7 @@ PanelWindow {
         if (deleteProc.running) { showToast("⏳ 删除中..."); return; }
         deleteProc.pendingType = type;
         deleteProc.onSuccess = onSuccess || null;
-        deleteProc.command = ["starcatch", type, "delete", id];
+        deleteProc.command = StarcatchCommands.deleteCommand(cfg.starcatchPath, type, id);
         deleteProc.running = true;
     }
 
@@ -751,7 +752,7 @@ PanelWindow {
 
                 Process {
                     id: todoProcess
-                    command: ["starcatch", "--json", "todo", "list", "--all"]
+                    command: StarcatchCommands.listCommand(cfg.starcatchPath, "todo")
                     running: false
                     stdout: StdioCollector { id: todoStdout }
                     stderr: StdioCollector { id: todoStderr }
@@ -762,7 +763,7 @@ PanelWindow {
 
                 Process {
                     id: ideaProcess
-                    command: ["starcatch", "--json", "idea", "list", "-d", "7"]
+                    command: StarcatchCommands.listCommand(cfg.starcatchPath, "idea", 7)
                     running: false
                     stdout: StdioCollector { id: ideaStdout }
                     stderr: StdioCollector { id: ideaStderr }
@@ -773,10 +774,11 @@ PanelWindow {
 
                 Process {
                     id: logProcess
-                    command: [
-                        "starcatch", "--json", "log", "list", "-d",
-                        cfg.normalizeLogFilterDays(cfg.logFilterDays).toString()
-                    ]
+                    command: StarcatchCommands.listCommand(
+                        cfg.starcatchPath,
+                        "log",
+                        cfg.normalizeLogFilterDays(cfg.logFilterDays)
+                    )
                     running: false
                     stdout: StdioCollector { id: logStdout }
                     stderr: StdioCollector { id: logStderr }

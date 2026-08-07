@@ -213,12 +213,13 @@ test("buildLogAddCommand includes repeated image args", () => {
     buildLogAddCommand("shipped v2 mood:happy project:backend #work", "/tmp/a.png,/tmp/b.jpg"),
     {
       command: [
-        "starcatch", "log", "add", "shipped v2",
+        "starcatch", "log", "add",
         "-m", "happy",
         "-t", "work",
         "-P", "backend",
         "--image", "/tmp/a.png",
-        "--image", "/tmp/b.jpg"
+        "--image", "/tmp/b.jpg",
+        "--", "shipped v2"
       ]
     }
   );

@@ -1,6 +1,8 @@
 // Pure JS functions extracted from Panel.qml & Config.qml for testing
 // These have no QML/Quickshell runtime dependencies.
 
+const StarcatchCommands = require("../src/StarcatchCommands.js");
+
 function parseJson(text) {
   try { return JSON.parse(text.trim()); } catch(e) { return []; }
 }
@@ -129,14 +131,11 @@ function buildLogAddCommand(inputText, imageText) {
   var content = (parsed.content || "").trim();
   if (!content) return { error: "内容不能为空" };
 
-  var cmd = ["starcatch", "log", "add", content];
-  if (parsed.mood) cmd.push("-m", parsed.mood);
-  if (parsed.tags.length > 0) cmd.push("-t", parsed.tags.join(","));
-  if (parsed.project) cmd.push("-P", parsed.project);
-  for (var i = 0; i < images.length; i++) {
-    cmd.push("--image", images[i]);
-  }
-  return { command: cmd };
+  return {
+    command: StarcatchCommands.logAddCommand(
+      "starcatch", content, parsed.mood, parsed.tags, parsed.project, images
+    )
+  };
 }
 
 function normalizeImageText(text) {
@@ -342,7 +341,7 @@ function normalizeLogFilterDays(value) {
 }
 
 function logListCommand(value) {
-  return ["starcatch", "--json", "log", "list", "-d", String(normalizeLogFilterDays(value))];
+  return StarcatchCommands.listCommand("starcatch", "log", normalizeLogFilterDays(value));
 }
 
 function inlineImageSummary(images, maxVisible) {

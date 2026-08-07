@@ -360,7 +360,8 @@ Matugen 模式下通过 `Timer { interval: 3000 }` 轮询文件变化，实现�
 - `logFilterDays`: 1 / 3 / 7 / 30（默认 3）
 
 > 注：`refreshInterval`（30000ms）硬编码在 `Panel.qml` 的 `autoRefreshTimer`；
-> `starcatch` 二进制路径硬编码在各 `Process.command` 数组中，非 Config 属性。
+> `starcatch` 二进制路径由 `Config.starcatchPath` 统一提供；如不在 `PATH` 中，
+> 可在启动面板前设置 `STARCATCH_BIN=/path/to/starcatch`。
 
 ---
 

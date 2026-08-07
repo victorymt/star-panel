@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import "StarcatchCommands.js" as StarcatchCommands
 
 Popup {
     id: root
@@ -778,7 +779,9 @@ Popup {
             return;
         }
         pendingReload = reloadType;
-        actionProc.command = ["starcatch", "todo", cmd, itemData.id];
+        actionProc.command = StarcatchCommands.todoActionCommand(
+            cfg.starcatchPath, cmd, itemData.id
+        );
         actionProc.running = true;
     }
 }

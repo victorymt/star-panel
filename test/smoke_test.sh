@@ -63,16 +63,16 @@ else
   pass "qmllint 未安装，跳过"
 fi
 
-# ── 5. JS 解析器单元测试 ──
-echo "=== 5. JS 解析器单元测试 ==="
+# ── 5. JS 单元与命令集成测试 ──
+echo "=== 5. JS 单元与命令集成测试 ==="
 if command -v node &>/dev/null; then
-  if node test/parsers.test.js 2>&1; then
-    pass "parsers.test.js 通过"
+  if node test/parsers.test.js 2>&1 && node test/starcatch_commands.test.js 2>&1; then
+    pass "JS 测试通过"
   else
-    fail "parsers.test.js 失败"
+    fail "JS 测试失败"
   fi
 else
-  pass "node 未安装，跳过解析器测试"
+  pass "node 未安装，跳过 JS 测试"
 fi
 
 # ── 6. 剪贴板图片助手测试 ──

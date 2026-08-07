@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import "StarcatchCommands.js" as StarcatchCommands
 
 /// QuickInput — 底部快速输入组件
 /// Pipe 模式快速捕获灵感、待办、日志到 Starcatch
@@ -16,6 +17,7 @@ Item {
     property bool inputActive: textInput.activeFocus || logImageField.activeFocus
     property bool cmdMode: false
     readonly property bool logImageInputVisible: !cmdMode && typeSelector.typeModels[typeSelector.currentIndex].type === "log"
+    readonly property string pipeHelperPath: Quickshell.shellDir + "/src/starcatch-pipe.sh"
 
     // 供列表的 vim `o` 调用：聚焦输入框（进入 insert mode）
     function focusInput() { textInput.forceActiveFocus(); }
@@ -91,16 +93,16 @@ Item {
         var content = (parsed.content || "").trim();
         if (!content) return { error: "内容不能为空" };
 
-        var cmd = ["starcatch", "log", "add"];
-        if (parsed.mood) cmd.push("-m", parsed.mood);
-        if (parsed.tags.length > 0) cmd.push("-t", parsed.tags.join(","));
-        if (parsed.project) cmd.push("-P", parsed.project);
-        for (var i = 0; i < images.length; i++) {
-            cmd.push("--image", images[i]);
-        }
-        // Keep Markdown lines such as "- item" from being parsed as options.
-        cmd.push("--", content);
-        return { command: cmd };
+        return {
+            command: StarcatchCommands.logAddCommand(
+                cfg.starcatchPath,
+                content,
+                parsed.mood,
+                parsed.tags,
+                parsed.project,
+                images
+            )
+        };
     }
 
     // 面板打开时延迟聚焦，配合滑入动画
@@ -460,8 +462,9 @@ Item {
                     if (logCommand && logCommand.command) {
                         pipeProc.command = logCommand.command;
                     } else {
-                        var safeText = "'" + inputText.replace(/'/g, "'\\''") + "'";
-                        pipeProc.command = ["bash", "-c", "printf '%s\\n' " + safeText + " | starcatch pipe " + type];
+                        pipeProc.command = StarcatchCommands.pipeCommand(
+                            root.pipeHelperPath, cfg.starcatchPath, type, inputText
+                        );
                     }
                     pipeProc.running = true;
 

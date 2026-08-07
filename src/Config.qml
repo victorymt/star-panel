@@ -54,6 +54,9 @@ Item {
     // ── 用户 Home 目录 ──
     readonly property string homeDir: Quickshell.env("HOME")
 
+    // 可通过 STARCATCH_BIN 覆盖，所有命令统一从这里读取。
+    readonly property string starcatchPath: Quickshell.env("STARCATCH_BIN") || "starcatch"
+
     // ── 从文件加载持久化设置 ──
     Process {
         id: settingsLoader
