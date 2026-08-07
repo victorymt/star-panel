@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import "EditorKeys.js" as EditorKeys
 import "StarcatchCommands.js" as StarcatchCommands
 
 /// StarPanel — 负一屏主窗口
@@ -186,27 +187,10 @@ PanelWindow {
 
     function handleEmacsEdit(field, event) {
         if (!(event.modifiers & Qt.ControlModifier)) return false;
-        if (event.key === Qt.Key_A) {
-            field.cursorPosition = 0;
-        } else if (event.key === Qt.Key_E) {
-            field.cursorPosition = field.text.length;
-        } else if (event.key === Qt.Key_B) {
-            field.cursorPosition = Math.max(0, field.cursorPosition - 1);
-        } else if (event.key === Qt.Key_F) {
-            field.cursorPosition = Math.min(field.text.length, field.cursorPosition + 1);
-        } else if (event.key === Qt.Key_K) {
-            var pos = field.cursorPosition;
-            var end = field.text.indexOf("\n", pos);
-            field.text = end >= 0
-                ? field.text.slice(0, pos) + field.text.slice(end)
-                : field.text.slice(0, pos);
-            field.cursorPosition = pos;
-        } else if (event.key === Qt.Key_U) {
-            field.text = "";
-            field.cursorPosition = 0;
-        } else {
-            return false;
-        }
+        var edit = EditorKeys.apply(field.text, field.cursorPosition, event.key);
+        if (!edit.handled) return false;
+        field.text = edit.text;
+        field.cursorPosition = edit.cursor;
         event.accepted = true;
         return true;
     }

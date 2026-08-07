@@ -51,6 +51,7 @@ ShellRoot (shell.qml)
       ├── IpcHandler           ←── IPC 控制 (toggle/show/hide)
       ├── ReloadCoordinator     ←── 并行刷新、超时、排队和 JSON 映射
       ├── EntryInput            ←── 日志输入解析和图片路径规范化
+      ├── EditorKeys            ←── Emacs 文本编辑快捷键变换
       ├── Rectangle (背景面板)  ←── 半透明浮动卡片
       │    ├── Header        ⭐ 星捕 + 加载状态 + ↻ 刷新 + ⚙ 设置 + ? 帮助 + ✕ 关闭
       │    ├── TabBar        📋待办 │ 💭灵感 │ 📓日志
@@ -106,6 +107,7 @@ starcatch log add --help | grep -- --image  # 日志图片需要新版 CLI
     ├── Panel.qml          主面板窗口
     ├── ReloadCoordinator.qml 刷新协调器（并行加载/超时/排队/映射）
     ├── EntryInput.js      日志输入解析和图片路径规范化
+    ├── EditorKeys.js      Emacs 文本编辑快捷键变换
     ├── TodoList.qml       待办列表
     ├── IdeaList.qml       灵感列表
     ├── LogList.qml        日志列表

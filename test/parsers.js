@@ -4,6 +4,7 @@
 const StarcatchCommands = require("../src/StarcatchCommands.js");
 const CommandRouter = require("../src/CommandRouter.js");
 const EntryInput = require("../src/EntryInput.js");
+const EditorKeys = require("../src/EditorKeys.js");
 
 function parseJson(text) {
   try { return JSON.parse(text.trim()); } catch(e) { return []; }
@@ -258,19 +259,8 @@ function todoShortcutAction(key, rawStatus) {
 }
 
 function emacsEditResult(text, cursor, key) {
-  if (key === "A") return { text: text, cursor: 0 };
-  if (key === "E") return { text: text, cursor: text.length };
-  if (key === "B") return { text: text, cursor: Math.max(0, cursor - 1) };
-  if (key === "F") return { text: text, cursor: Math.min(text.length, cursor + 1) };
-  if (key === "U") return { text: "", cursor: 0 };
-  if (key === "K") {
-    var end = text.indexOf("\n", cursor);
-    return {
-      text: end >= 0 ? text.slice(0, cursor) + text.slice(end) : text.slice(0, cursor),
-      cursor: cursor
-    };
-  }
-  return { text: text, cursor: cursor };
+  var result = EditorKeys.apply(text, cursor, EditorKeys["KEY_" + key]);
+  return { text: result.text, cursor: result.cursor };
 }
 
 // Search/filter helpers (mirrors QML logic in TodoList/IdeaList/LogList)
