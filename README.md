@@ -24,6 +24,7 @@ qs -c star-panel ipc call panel toggle
 ├── src/
 │   ├── Panel.qml          ←── 主面板（右侧滑出）
 │   ├── ReloadCoordinator.qml ←── 数据刷新、超时与结果映射
+│   ├── EntryInput.js      ←── 日志输入解析与图片路径规范化
 │   ├── SettingsPanel.qml  ←── 设置面板（主题 / 面板宽度 / 界面缩放）
 │   ├── TodoList.qml       ←── 待办
 │   ├── IdeaList.qml       ←── 灵感

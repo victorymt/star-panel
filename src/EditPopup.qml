@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import "EntryInput.js" as EntryInput
 import "StarcatchCommands.js" as StarcatchCommands
 
 /// EditPopup — 条目编辑弹窗
@@ -130,17 +131,11 @@ Popup {
     }
 
     function splitImagePaths(text) {
-        var raw = (text || "").split(/[\n,]/);
-        var paths = [];
-        for (var i = 0; i < raw.length; i++) {
-            var path = raw[i].trim();
-            if (path) paths.push(path);
-        }
-        return paths;
+        return EntryInput.splitImagePaths(text);
     }
 
     function normalizeImageText(text) {
-        return splitImagePaths(text).join("\n");
+        return EntryInput.normalizeImageText(text);
     }
 
     // 回填表单（按类型把 show 的 JSON 映射到各字段）
@@ -201,19 +196,9 @@ Popup {
         } else {
             var content = logContentField.text.trim();
             if (!content) { panel.showToast("⚠️ 内容不能为空"); return; }
-            var imageArgs = [];
-            var originalImages = root.normalizeImageText(root.originalLogImagesText);
-            var currentImages = root.normalizeImageText(logImagesText.text);
-            if (currentImages !== originalImages) {
-                var imagePaths = root.splitImagePaths(logImagesText.text);
-                if (imagePaths.length === 0) {
-                    imageArgs.push("--clear-images");
-                } else {
-                    for (var i = 0; i < imagePaths.length; i++) {
-                        imageArgs.push("--image", imagePaths[i]);
-                    }
-                }
-            }
+            var imageArgs = EntryInput.editLogImageArgs(
+                root.originalLogImagesText, logImagesText.text
+            );
             cmd = StarcatchCommands.logEditCommand(cfg.starcatchPath, root.itemId, {
                 content: content,
                 mood: moodField.text.trim(),

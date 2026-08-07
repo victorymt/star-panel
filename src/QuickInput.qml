@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import "CommandRouter.js" as CommandRouter
+import "EntryInput.js" as EntryInput
 import "StarcatchCommands.js" as StarcatchCommands
 
 /// QuickInput — 底部快速输入组件
@@ -40,68 +41,30 @@ Item {
     }
 
     function splitImagePaths(text) {
-        var raw = (text || "").split(/[\n,]/);
-        var paths = [];
-        for (var i = 0; i < raw.length; i++) {
-            var path = raw[i].trim();
-            if (path) paths.push(path);
-        }
-        return paths;
+        return EntryInput.splitImagePaths(text);
     }
 
     function parseLogInput(raw) {
-        var text = (raw || "").trim();
-        var sep = text.indexOf("|");
-        if (sep >= 0) {
-            var meta = parseLogTokens(text.slice(sep + 1), false);
-            meta.content = text.slice(0, sep).trim();
-            return meta;
-        }
-        return parseLogTokens(text, true);
+        return EntryInput.parseLogInput(raw);
     }
 
     function parseLogTokens(raw, collectContent) {
-        var tokens = (raw || "").trim().split(/\s+/);
-        var result = { content: collectContent ? "" : "", mood: "", tags: [], project: "" };
-        var contentParts = [];
-        for (var i = 0; i < tokens.length; i++) {
-            var token = tokens[i];
-            if (!token) continue;
-            if (token.indexOf("mood:") === 0 || token.indexOf("mood：") === 0) {
-                var mood = token.slice(5).trim();
-                if (!mood && i + 1 < tokens.length) mood = tokens[++i];
-                result.mood = mood;
-            } else if (token.indexOf("project:") === 0 || token.indexOf("project：") === 0) {
-                var project = token.slice(8).trim();
-                if (!project && i + 1 < tokens.length) project = tokens[++i];
-                result.project = project;
-            } else if (token[0] === "#") {
-                var tag = token.slice(1).replace(/[，,。.!?！？；;：:]+$/, "").trim();
-                if (tag) result.tags.push(tag);
-            } else if (collectContent) {
-                contentParts.push(token);
-            }
-        }
-        if (collectContent) result.content = contentParts.join(" ");
-        return result;
+        return EntryInput.parseLogTokens(raw, collectContent);
     }
 
     function buildLogAddCommand(inputText, imageText) {
-        var images = splitImagePaths(imageText);
-        if (images.length === 0) return null;
-
-        var parsed = parseLogInput(inputText);
-        var content = (parsed.content || "").trim();
-        if (!content) return { error: "内容不能为空" };
+        var payload = EntryInput.buildLogPayload(inputText, imageText);
+        if (!payload) return null;
+        if (payload.error) return payload;
 
         return {
             command: StarcatchCommands.logAddCommand(
                 cfg.starcatchPath,
-                content,
-                parsed.mood,
-                parsed.tags,
-                parsed.project,
-                images
+                payload.content,
+                payload.mood,
+                payload.tags,
+                payload.project,
+                payload.images
             )
         };
     }

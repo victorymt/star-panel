@@ -50,6 +50,7 @@ ShellRoot (shell.qml)
       ├── Colors (Colors.qml)  ←── Matugen 主题色
       ├── IpcHandler           ←── IPC 控制 (toggle/show/hide)
       ├── ReloadCoordinator     ←── 并行刷新、超时、排队和 JSON 映射
+      ├── EntryInput            ←── 日志输入解析和图片路径规范化
       ├── Rectangle (背景面板)  ←── 半透明浮动卡片
       │    ├── Header        ⭐ 星捕 + 加载状态 + ↻ 刷新 + ⚙ 设置 + ? 帮助 + ✕ 关闭
       │    ├── TabBar        📋待办 │ 💭灵感 │ 📓日志
@@ -104,6 +105,7 @@ starcatch log add --help | grep -- --image  # 日志图片需要新版 CLI
 └── src/               ←── 组件目录
     ├── Panel.qml          主面板窗口
     ├── ReloadCoordinator.qml 刷新协调器（并行加载/超时/排队/映射）
+    ├── EntryInput.js      日志输入解析和图片路径规范化
     ├── TodoList.qml       待办列表
     ├── IdeaList.qml       灵感列表
     ├── LogList.qml        日志列表
@@ -330,7 +332,7 @@ starcatch --json log list -d N    →  [{ id, content, mood, tags, images, ... }
 
 ### QuickInput.qml
 
-快速输入组件。无图片时将文本通过 pipe 模式提交到 Starcatch；日志附带图片路径时改用 `starcatch log add` 并追加 `--image` 参数。`ClipboardImagePaste.qml` 调用随 `src/` 一起部署的 `clipboard-image.sh` 读取 Wayland 剪贴板图片，提交成功后由 Starcatch 持久化到 image-cache，并清理面板暂存文件。
+快速输入组件。无图片时将文本通过 pipe 模式提交到 Starcatch；日志附带图片路径时改用 `starcatch log add` 并追加 `--image` 参数。日志元数据解析和图片路径规范化由共享的 `EntryInput.js` 提供，编辑弹窗复用同一规则。`ClipboardImagePaste.qml` 调用随 `src/` 一起部署的 `clipboard-image.sh` 读取 Wayland 剪贴板图片，提交成功后由 Starcatch 持久化到 image-cache，并清理面板暂存文件。
 
 ```bash
 # 内部执行的命令示例
