@@ -49,6 +49,7 @@ ShellRoot (shell.qml)
  └── PanelWindow (Panel.qml)  ←── WlrLayer.Top 覆盖层
       ├── Colors (Colors.qml)  ←── Matugen 主题色
       ├── IpcHandler           ←── IPC 控制 (toggle/show/hide)
+      ├── ReloadCoordinator     ←── 并行刷新、超时、排队和 JSON 映射
       ├── Rectangle (背景面板)  ←── 半透明浮动卡片
       │    ├── Header        ⭐ 星捕 + 加载状态 + ↻ 刷新 + ⚙ 设置 + ? 帮助 + ✕ 关闭
       │    ├── TabBar        📋待办 │ 💭灵感 │ 📓日志
@@ -66,16 +67,16 @@ ShellRoot (shell.qml)
 ```
 STARCATCH CLI                         PANEL (QML)
 ┌─────────────────┐     JSON (--json)  ┌──────────────────────┐
-│ starcatch --json│──── Process ────→ │ parseTodos()         │
+│ starcatch --json│──── Process ────→ │ ReloadCoordinator    │
 │ todo list --all │                   │ → todos: [...]       │
 ├─────────────────┤                   ├──────────────────────┤
-│ starcatch --json│──── Process ────→ │ parseIdeas()         │
+│ starcatch --json│──── Process ────→ │ ReloadCoordinator    │
 │ idea list -d 7  │                   │ → ideas: [...]       │
 ├─────────────────┤                   ├──────────────────────┤
-│ starcatch --json│──── Process ────→ │ parseLogs()          │
+│ starcatch --json│──── Process ────→ │ ReloadCoordinator    │
 │ log list -d N   │                   │ → logs: [...]        │
 ├─────────────────┤                   ├──────────────────────┤
-│ starcatch pipe  │←─── bash -c ──── │ QuickInput           │
+│ starcatch pipe  │←─── Process ───── │ QuickInput           │
 │ todo/idea/log   │   "printf ... |"  │ Enter 提交            │
 └─────────────────┘                   └──────────────────────┘
 ```
@@ -102,6 +103,7 @@ starcatch log add --help | grep -- --image  # 日志图片需要新版 CLI
 ├── shell.qml          ←── Quickshell 入口（ShellRoot）
 └── src/               ←── 组件目录
     ├── Panel.qml          主面板窗口
+    ├── ReloadCoordinator.qml 刷新协调器（并行加载/超时/排队/映射）
     ├── TodoList.qml       待办列表
     ├── IdeaList.qml       灵感列表
     ├── LogList.qml        日志列表
@@ -287,7 +289,7 @@ qs -c star-panel ipc call panel hide
 - 动画通过 `Behavior on slideOffset` 实现
 - `visible` 条件控制: `panelVisible || slideOffset > -(panelWidth + panelMargin * 2)`
 - 面板通过 `ColumnLayout` 垂直布局: 头部 → 选项卡 → 分隔线 → 内容区 → 快速输入
-- 三类列表独立跟踪加载和错误状态；超时会取消旧进程后重试，刷新失败不会清空已有数据
+- 通过 `ReloadCoordinator.qml` 管理三类列表的并行加载、独立加载/错误状态、15 秒超时和排队刷新；刷新失败不会清空已有数据
 - 删除命令绑定当前类型与 ID 进行二次确认；编辑弹窗关闭前会确认是否丢弃未保存修改
 
 ### TodoList.qml
@@ -313,7 +315,7 @@ starcatch --json idea list -d 7   →  [{ id, title, content, source, tags, ... 
 starcatch --json log list -d N    →  [{ id, content, mood, tags, images, ... }, ...]
 ```
 
-对应解析函数: `parseTodos()` / `parseIdeas()` / `parseLogs()`（`Panel.qml`）。
+对应映射函数: `mapTodos()` / `mapIdeas()` / `mapLogs()`（`ReloadCoordinator.qml`）。
 
 ### IdeaList.qml
 
@@ -359,7 +361,7 @@ Matugen 模式下通过 `Timer { interval: 3000 }` 轮询文件变化，实现�
 - `todoFilter`: "Pending" / "Done" / "Archived"
 - `logFilterDays`: 1 / 3 / 7 / 30（默认 3）
 
-> 注：`refreshInterval`（30000ms）硬编码在 `Panel.qml` 的 `autoRefreshTimer`；
+> 注：自动刷新间隔（30000ms）由 `ReloadCoordinator.qml` 的 `autoRefreshTimer` 管理；
 > `starcatch` 二进制路径由 `Config.starcatchPath` 统一提供；如不在 `PATH` 中，
 > 可在启动面板前设置 `STARCATCH_BIN=/path/to/starcatch`。
 

@@ -23,6 +23,7 @@ qs -c star-panel ipc call panel toggle
 ├── shell.qml              ←── QS 入口
 ├── src/
 │   ├── Panel.qml          ←── 主面板（右侧滑出）
+│   ├── ReloadCoordinator.qml ←── 数据刷新、超时与结果映射
 │   ├── SettingsPanel.qml  ←── 设置面板（主题 / 面板宽度 / 界面缩放）
 │   ├── TodoList.qml       ←── 待办
 │   ├── IdeaList.qml       ←── 灵感
