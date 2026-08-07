@@ -85,6 +85,10 @@ Popup {
     }
 
     function requestDelete() {
+        if (actionProc.running) {
+            panel.showToast("⏳ 操作进行中...");
+            return;
+        }
         if (!itemData.id) {
             panel.showToast("⚠️ 该项没有 id，无法删除");
             return;
@@ -107,7 +111,7 @@ Popup {
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
     dim: true
 
-    implicitWidth: Math.min(parent ? parent.width * 0.92 : 400, 400)
+    implicitWidth: Math.min(parent ? parent.width * 0.94 : 560, 560)
     implicitHeight: Math.min(
         Math.max(300, bodyColumn.implicitHeight + 150 + padding * 2),
         parent ? parent.height * 0.78 : 520
@@ -432,26 +436,30 @@ Popup {
             Button {
                 id: actionBtn
                 Layout.fillWidth: true
+                Layout.preferredHeight: cfg.controlHeight
                 flat: true
+                enabled: !actionProc.running
                 property var actions: {
                     if (itemData.rawStatus === "Pending")  return { cmd: "done",   label: "✓ 标记完成" };
                     if (itemData.rawStatus === "Done")     return { cmd: "reopen", label: "↩ 恢复待办" };
                     if (itemData.rawStatus === "Archived")  return { cmd: "reopen", label: "↩ 恢复待办" };
                     return { cmd: "", label: "" };
                 }
+                property color actionColor: actions.cmd === "done" ? theme.green : theme.blue
 
                 contentItem: Text {
-                    text: actionBtn.actions.label
-                    color: actionBtn.actions.cmd === "done" ? theme.green : theme.blue
+                    text: actionProc.running ? "处理中..." : actionBtn.actions.label
+                    color: theme.crust
                     font.pixelSize: cfg.fontSmall
                     font.bold: true
                     horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
                     radius: 6
                     color: parent.hovered
-                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
-                        : "transparent"
+                        ? Qt.rgba(parent.actionColor.r, parent.actionColor.g, parent.actionColor.b, 0.95)
+                        : Qt.rgba(parent.actionColor.r, parent.actionColor.g, parent.actionColor.b, 0.8)
                 }
                 onClicked: {
                     if (!itemData.id || !actionBtn.actions.cmd) return;
@@ -462,8 +470,10 @@ Popup {
             Button {
                 id: archiveBtn
                 Layout.fillWidth: true
+                Layout.preferredHeight: cfg.controlHeight
                 flat: true
                 visible: itemData.rawStatus !== "Archived"
+                enabled: !actionProc.running
 
                 contentItem: Text {
                     text: "📦 归档"
@@ -471,12 +481,15 @@ Popup {
                     font.pixelSize: cfg.fontSmall
                     font.bold: true
                     horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
                     radius: 6
                     color: parent.hovered
-                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
-                        : "transparent"
+                        ? Qt.rgba(theme.peach.r, theme.peach.g, theme.peach.b, 0.2)
+                        : Qt.rgba(theme.peach.r, theme.peach.g, theme.peach.b, 0.1)
+                    border.width: 1
+                    border.color: Qt.rgba(theme.peach.r, theme.peach.g, theme.peach.b, 0.45)
                 }
                 onClicked: {
                     if (!itemData.id) return;
@@ -493,6 +506,7 @@ Popup {
 
             Button {
                 Layout.fillWidth: true
+                Layout.preferredHeight: cfg.compactControlHeight
                 flat: true
                 contentItem: Text {
                     text: "📋 复制"
@@ -505,14 +519,16 @@ Popup {
                     radius: 6
                     color: parent.hovered
                         ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
-                        : "transparent"
+                        : Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.35)
                 }
                 onClicked: root.copyItemText()
             }
 
             Button {
                 Layout.fillWidth: true
+                Layout.preferredHeight: cfg.compactControlHeight
                 flat: true
+                enabled: !actionProc.running
                 contentItem: Text {
                     text: "✏️ 编辑"
                     color: theme.blue
@@ -524,28 +540,40 @@ Popup {
                     radius: 6
                     color: parent.hovered
                         ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
-                        : "transparent"
+                        : Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.35)
                 }
                 onClicked: root.requestEdit()
             }
 
             Button {
-                Layout.fillWidth: true
+                Layout.preferredWidth: 52
+                Layout.minimumWidth: 52
+                Layout.maximumWidth: 52
+                Layout.preferredHeight: cfg.compactControlHeight
                 flat: true
+                enabled: !actionProc.running
                 contentItem: Text {
-                    text: root.deleteArmed ? "再次点击确认" : "🗑️ 删除"
-                    color: root.deleteArmed ? theme.red : theme.peach
+                    text: root.deleteArmed ? "确认" : "🗑"
+                    color: theme.red
                     font.pixelSize: cfg.fontSmall
                     font.bold: true
                     horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
                     radius: 6
-                    color: parent.hovered
-                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
-                        : "transparent"
+                    color: root.deleteArmed
+                        ? Qt.rgba(theme.red.r, theme.red.g, theme.red.b, 0.24)
+                        : parent.hovered
+                            ? Qt.rgba(theme.red.r, theme.red.g, theme.red.b, 0.16)
+                            : Qt.rgba(theme.red.r, theme.red.g, theme.red.b, 0.08)
+                    border.width: root.deleteArmed ? 1 : 0
+                    border.color: Qt.rgba(theme.red.r, theme.red.g, theme.red.b, 0.65)
                 }
                 onClicked: root.requestDelete()
+                ToolTip.text: root.deleteArmed ? "再次点击确认删除" : "删除"
+                ToolTip.visible: hovered
+                ToolTip.delay: 400
             }
         }
     }
@@ -738,12 +766,17 @@ Popup {
             }
 
             root.close();
+            panel.showToast("✅ 操作成功", "success");
             if (t) panel.reloadData(t);
         }
     }
 
     function runAction(cmd, reloadType) {
         if (!itemData.id) return;
+        if (actionProc.running) {
+            panel.showToast("⏳ 操作进行中...");
+            return;
+        }
         pendingReload = reloadType;
         actionProc.command = ["starcatch", "todo", cmd, itemData.id];
         actionProc.running = true;

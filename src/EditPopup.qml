@@ -19,6 +19,9 @@ Popup {
     property string originalLogImagesText: ""
     property bool dirty: false
     property bool hydrating: false
+    property bool todoDescriptionPreview: false
+    property bool ideaContentPreview: false
+    property bool logContentPreview: false
 
     onPriorityValueChanged: markDirty()
 
@@ -27,7 +30,7 @@ Popup {
     closePolicy: Popup.NoAutoClose
     dim: true
 
-    implicitWidth: Math.min(parent ? parent.width * 0.94 : 420, 420)
+    implicitWidth: Math.min(parent ? parent.width * 0.94 : 560, 560)
     implicitHeight: Math.min(
         Math.max(360, editBodyColumn.implicitHeight + 150 + padding * 2),
         parent ? parent.height * 0.86 : 600
@@ -75,6 +78,9 @@ Popup {
         root.priorityValue = "P2";
         root.loadError = "";
         root.originalLogImagesText = "";
+        root.todoDescriptionPreview = false;
+        root.ideaContentPreview = false;
+        root.logContentPreview = false;
         root.startLoad();
         root.open();
     }
@@ -413,13 +419,34 @@ Popup {
                 }
             }
 
-            Text { text: "描述"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            RowLayout {
+                Layout.fillWidth: true
+
+                Text {
+                    text: "描述"
+                    color: theme.subtext1
+                    font.pixelSize: cfg.fontTiny
+                    Layout.fillWidth: true
+                }
+
+                MarkdownModeSwitch {
+                    preview: root.todoDescriptionPreview
+                    colors: theme
+                    textSize: cfg.fontTiny
+                    onModeSelected: function(preview) {
+                        root.todoDescriptionPreview = preview;
+                        if (!preview) Qt.callLater(function() { descField.forceActiveFocus(); });
+                    }
+                }
+            }
+
             ScrollView {
                 id: todoDescriptionScroll
                 Layout.fillWidth: true
                 Layout.minimumHeight: 72
                 Layout.preferredHeight: 120
                 Layout.maximumHeight: 180
+                visible: !root.todoDescriptionPreview
                 clip: true
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 ScrollBar.vertical.policy: ScrollBar.AsNeeded
@@ -448,6 +475,33 @@ Popup {
                             panel.handleEmacsEdit(descField, event);
                         }
                     }
+                }
+            }
+
+            ScrollView {
+                id: todoDescriptionPreviewScroll
+                Layout.fillWidth: true
+                Layout.minimumHeight: 72
+                Layout.preferredHeight: 120
+                Layout.maximumHeight: 180
+                visible: root.todoDescriptionPreview
+                clip: true
+                padding: 8
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                background: Rectangle {
+                    radius: 6
+                    color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
+                    border.width: 1
+                    border.color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                }
+
+                MarkdownText {
+                    width: todoDescriptionPreviewScroll.availableWidth
+                    markdown: descField.text
+                    color: theme.text
+                    font.pixelSize: cfg.fontBase
                 }
             }
 
@@ -576,13 +630,34 @@ Popup {
                 }
             }
 
-            Text { text: "内容"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            RowLayout {
+                Layout.fillWidth: true
+
+                Text {
+                    text: "内容"
+                    color: theme.subtext1
+                    font.pixelSize: cfg.fontTiny
+                    Layout.fillWidth: true
+                }
+
+                MarkdownModeSwitch {
+                    preview: root.ideaContentPreview
+                    colors: theme
+                    textSize: cfg.fontTiny
+                    onModeSelected: function(preview) {
+                        root.ideaContentPreview = preview;
+                        if (!preview) Qt.callLater(function() { contentField.forceActiveFocus(); });
+                    }
+                }
+            }
+
             ScrollView {
                 id: ideaContentScroll
                 Layout.fillWidth: true
                 Layout.minimumHeight: 96
                 Layout.preferredHeight: 180
                 Layout.maximumHeight: 240
+                visible: !root.ideaContentPreview
                 clip: true
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 ScrollBar.vertical.policy: ScrollBar.AsNeeded
@@ -611,6 +686,33 @@ Popup {
                             panel.handleEmacsEdit(contentField, event);
                         }
                     }
+                }
+            }
+
+            ScrollView {
+                id: ideaContentPreviewScroll
+                Layout.fillWidth: true
+                Layout.minimumHeight: 96
+                Layout.preferredHeight: 180
+                Layout.maximumHeight: 240
+                visible: root.ideaContentPreview
+                clip: true
+                padding: 8
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                background: Rectangle {
+                    radius: 6
+                    color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
+                    border.width: 1
+                    border.color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                }
+
+                MarkdownText {
+                    width: ideaContentPreviewScroll.availableWidth
+                    markdown: contentField.text
+                    color: theme.text
+                    font.pixelSize: cfg.fontBase
                 }
             }
 
@@ -681,13 +783,34 @@ Popup {
             spacing: 6
             visible: root.type === "log" && !root.loading && root.loadError === ""
 
-            Text { text: "内容"; color: theme.subtext1; font.pixelSize: cfg.fontTiny; Layout.fillWidth: true }
+            RowLayout {
+                Layout.fillWidth: true
+
+                Text {
+                    text: "内容"
+                    color: theme.subtext1
+                    font.pixelSize: cfg.fontTiny
+                    Layout.fillWidth: true
+                }
+
+                MarkdownModeSwitch {
+                    preview: root.logContentPreview
+                    colors: theme
+                    textSize: cfg.fontTiny
+                    onModeSelected: function(preview) {
+                        root.logContentPreview = preview;
+                        if (!preview) Qt.callLater(function() { logContentField.forceActiveFocus(); });
+                    }
+                }
+            }
+
             ScrollView {
                 id: logContentScroll
                 Layout.fillWidth: true
                 Layout.minimumHeight: 96
                 Layout.preferredHeight: 180
                 Layout.maximumHeight: 240
+                visible: !root.logContentPreview
                 clip: true
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 ScrollBar.vertical.policy: ScrollBar.AsNeeded
@@ -719,6 +842,33 @@ Popup {
                             panel.handleEmacsEdit(logContentField, event);
                         }
                     }
+                }
+            }
+
+            ScrollView {
+                id: logContentPreviewScroll
+                Layout.fillWidth: true
+                Layout.minimumHeight: 96
+                Layout.preferredHeight: 180
+                Layout.maximumHeight: 240
+                visible: root.logContentPreview
+                clip: true
+                padding: 8
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                background: Rectangle {
+                    radius: 6
+                    color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.5)
+                    border.width: 1
+                    border.color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                }
+
+                MarkdownText {
+                    width: logContentPreviewScroll.availableWidth
+                    markdown: logContentField.text
+                    color: theme.text
+                    font.pixelSize: cfg.fontBase
                 }
             }
 
@@ -839,26 +989,31 @@ Popup {
 
             Button {
                 Layout.fillWidth: true
+                Layout.preferredHeight: cfg.controlHeight
                 flat: true
                 enabled: !saveProc.running
                 contentItem: Text {
                     text: saveProc.running ? "保存中…" : "💾 保存 (Ctrl+Enter)"
-                    color: theme.green
+                    color: theme.crust
                     font.pixelSize: cfg.fontSmall
                     font.bold: true
                     horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
                     radius: 6
-                    color: parent.hovered
-                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
-                        : "transparent"
+                    color: parent.enabled
+                        ? parent.hovered
+                            ? Qt.rgba(theme.green.r, theme.green.g, theme.green.b, 0.95)
+                            : Qt.rgba(theme.green.r, theme.green.g, theme.green.b, 0.8)
+                        : Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.45)
                 }
                 onClicked: root.save()
             }
 
             Button {
-                Layout.fillWidth: true
+                Layout.preferredWidth: 96
+                Layout.preferredHeight: cfg.controlHeight
                 flat: true
                 enabled: !saveProc.running
                 contentItem: Text {
@@ -866,12 +1021,15 @@ Popup {
                     color: theme.subtext1
                     font.pixelSize: cfg.fontSmall
                     horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
                     radius: 6
                     color: parent.hovered
                         ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
-                        : "transparent"
+                        : Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.35)
+                    border.width: 1
+                    border.color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.35)
                 }
                 onClicked: root.requestClose()
             }

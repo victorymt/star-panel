@@ -13,6 +13,8 @@ Item {
     property string searchText: ""
     property bool searchActive: searchField.activeFocus
     readonly property string itemType: "idea"
+    readonly property alias detailPopupControl: detailPopup
+    readonly property alias editPopupControl: editPopup
 
     // vim gg/dd/gt 状态机
     property bool _pendingG: false

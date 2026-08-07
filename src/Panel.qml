@@ -39,8 +39,9 @@ PanelWindow {
     }
 
     // ── 通用 toast 反馈（供子组件调用） ──
-    function showToast(msg) {
+    function showToast(msg, kind) {
         toastLabel.text = msg;
+        toast.kind = kind || toast.kindForMessage(msg);
         toast.show();
     }
 
@@ -54,12 +55,12 @@ PanelWindow {
     function closeTopOrSelf() {
         if (helpPanel.visible)                 helpPanel.close();
         else if (settingsPanel.visible)        settingsPanel.close();
-        else if (todoList.editPopup.visible)   todoList.editPopup.handleEscape();
-        else if (ideaList.editPopup.visible)   ideaList.editPopup.handleEscape();
-        else if (logList.editPopup.visible)    logList.editPopup.handleEscape();
-        else if (todoList.detailPopup.visible) todoList.detailPopup.close();
-        else if (ideaList.detailPopup.visible) ideaList.detailPopup.close();
-        else if (logList.detailPopup.visible)  logList.detailPopup.close();
+        else if (todoList.editPopupControl.visible)   todoList.editPopupControl.handleEscape();
+        else if (ideaList.editPopupControl.visible)   ideaList.editPopupControl.handleEscape();
+        else if (logList.editPopupControl.visible)    logList.editPopupControl.handleEscape();
+        else if (todoList.detailPopupControl.visible) todoList.detailPopupControl.close();
+        else if (ideaList.detailPopupControl.visible) ideaList.detailPopupControl.close();
+        else if (logList.detailPopupControl.visible)  logList.detailPopupControl.close();
         else                                   panelVisible = false;
     }
 
@@ -1072,19 +1073,37 @@ PanelWindow {
     // ── Toast 反馈层 ──
     Popup {
         id: toast
-        parent: panel.contentItem
-        x: (panel.contentItem.width - width) / 2
-        y: panel.contentItem.height - height - 24
-        width: Math.min(toastLabel.implicitWidth + 32, panel.contentItem.width - 32)
+        parent: backdrop
+        x: (backdrop.width - width) / 2
+        y: Math.max(12, backdrop.height - height - quickInput.height - 32)
+        width: Math.min(toastLabel.implicitWidth + 32, backdrop.width - 24)
         height: toastLabel.implicitHeight + 20
         modal: false
         focus: false
         closePolicy: Popup.NoAutoClose
         padding: 10
+
+        property string kind: "info"
+        readonly property color accentColor: kind === "error" ? theme.red
+            : kind === "warning" ? theme.peach
+            : kind === "success" ? theme.green
+            : theme.blue
+
+        function kindForMessage(message) {
+            var value = (message || "").toString();
+            if (value.indexOf("❌") === 0) return "error";
+            if (value.indexOf("⚠") === 0 || value.indexOf("再次") === 0 || value.indexOf("再按") === 0)
+                return "warning";
+            if (value.indexOf("✅") === 0 || value.indexOf("✨") === 0
+                    || value.indexOf("📋 已复制") === 0 || value.indexOf("🗑️  已删除") === 0)
+                return "success";
+            return "info";
+        }
+
         background: Rectangle {
             radius: 8
-            color: Qt.rgba(theme.surface0.r, theme.surface0.g, theme.surface0.b, 0.92)
-            border.color: Qt.rgba(theme.red.r, theme.red.g, theme.red.b, 0.4)
+            color: Qt.rgba(toast.accentColor.r, toast.accentColor.g, toast.accentColor.b, 0.16)
+            border.color: Qt.rgba(toast.accentColor.r, toast.accentColor.g, toast.accentColor.b, 0.7)
             border.width: 1
         }
         contentItem: Text {

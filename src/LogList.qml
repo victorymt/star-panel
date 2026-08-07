@@ -14,6 +14,8 @@ Item {
     property bool searchActive: searchField.activeFocus
     property int filterDays: 3
     readonly property string itemType: "log"
+    readonly property alias detailPopupControl: detailPopup
+    readonly property alias editPopupControl: editPopup
     readonly property int maxInlineImages: 3
     readonly property int inlineThumbnailWidth: 64
     readonly property int inlineThumbnailHeight: 48
