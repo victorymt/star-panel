@@ -355,13 +355,36 @@ Item {
                 id: contentColumn
                 spacing: 2
 
-                Text {
-                    text: modelData.title || "(untitled)"
-                    color: colors ? colors.text : "#cdd6f4"
-                    font.pixelSize: cfg.fontBase
-                    font.bold: true
-                    elide: Text.ElideRight
+                RowLayout {
+                    spacing: 4
                     Layout.fillWidth: true
+
+                    Text {
+                        text: modelData.title || "(untitled)"
+                        color: colors ? colors.text : "#cdd6f4"
+                        font.pixelSize: cfg.fontBase
+                        font.bold: true
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+
+                    EntryQuickActions {
+                        revealed: itemDel.hovered
+                        editColor: colors ? colors.blue : "#89b4fa"
+                        copyColor: colors ? colors.green : "#a6e3a1"
+                        hoverColor: colors ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.55) : "#45475a"
+                        iconSize: cfg.fontSmall
+                        onEditRequested: {
+                            listView.currentIndex = itemDel.index;
+                            root._trackCurrent();
+                            root.editCurrentItem();
+                        }
+                        onCopyRequested: {
+                            listView.currentIndex = itemDel.index;
+                            root._trackCurrent();
+                            root.copyCurrentItem();
+                        }
+                    }
                 }
 
                 Text {

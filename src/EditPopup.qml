@@ -27,15 +27,21 @@ Popup {
     closePolicy: Popup.NoAutoClose
     dim: true
 
-    implicitWidth: Math.min(parent ? parent.width * 0.92 : 380, 420)
-    implicitHeight: Math.min(contentColumn.implicitHeight + padding * 2, parent ? parent.height * 0.8 : 460)
+    implicitWidth: Math.min(parent ? parent.width * 0.94 : 420, 420)
+    implicitHeight: Math.min(
+        Math.max(360, editBodyColumn.implicitHeight + 150 + padding * 2),
+        parent ? parent.height * 0.86 : 600
+    )
     padding: 16
 
     x: (parent.width - width) / 2
     y: (parent.height - height) / 2
 
     // Quickshell 下 Popup 不自动抢焦点，打开时交给内容，Esc/Ctrl+Enter 才能生效
-    onOpened: contentItem.forceActiveFocus()
+    onOpened: {
+        contentItem.forceActiveFocus();
+        Qt.callLater(function() { editScroll.contentItem.contentY = 0; });
+    }
     // 关闭后把焦点还给所属列表，保证 j/k/e 等继续可用
     onClosed: {
         if (discardPopup.visible) discardPopup.close();
@@ -62,7 +68,6 @@ Popup {
 
     function openEdit(t, id) {
         clipboardImagePaste.cleanupAll();
-        root.hydrating = true;
         root.dirty = false;
         root.type = t;
         root.itemId = id;
@@ -70,10 +75,24 @@ Popup {
         root.priorityValue = "P2";
         root.loadError = "";
         root.originalLogImagesText = "";
-        root.loading = true;
-        loadProc.command = ["starcatch", "--json", t, "show", id];
-        loadProc.running = true;
+        root.startLoad();
         root.open();
+    }
+
+    function startLoad() {
+        if (!root.itemId || loadProc.running) return;
+        root.hydrating = true;
+        root.loadError = "";
+        root.loading = true;
+        loadProc.command = ["starcatch", "--json", root.type, "show", root.itemId];
+        loadProc.running = true;
+    }
+
+    function focusPrimaryField() {
+        var field = root.type === "todo" ? titleField
+            : root.type === "idea" ? ideaTitleField : logContentField;
+        field.forceActiveFocus();
+        field.cursorPosition = field.text.length;
     }
 
     function markDirty() {
@@ -142,6 +161,7 @@ Popup {
         }
         root.hydrating = false;
         root.dirty = false;
+        Qt.callLater(function() { root.focusPrimaryField(); });
     }
 
     // 全字段直传：空串=清空（后端三态）。所有字段显式传，不做 diff。
@@ -311,6 +331,20 @@ Popup {
             color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.3)
         }
 
+        ScrollView {
+            id: editScroll
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.minimumHeight: 160
+            clip: true
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+            ColumnLayout {
+                id: editBodyColumn
+                width: editScroll.availableWidth
+                spacing: 10
+
         // ── 加载中 ──
         BusyIndicator {
             Layout.alignment: Qt.AlignHCenter
@@ -319,14 +353,38 @@ Popup {
         }
 
         // ── 加载错误 ──
-        Text {
+        ColumnLayout {
             Layout.fillWidth: true
             visible: root.loadError !== ""
-            text: root.loadError
-            color: theme.red
-            font.pixelSize: cfg.fontSmall
-            wrapMode: Text.WordWrap
-            horizontalAlignment: Text.AlignHCenter
+            spacing: 8
+
+            Text {
+                Layout.fillWidth: true
+                text: root.loadError
+                color: theme.red
+                font.pixelSize: cfg.fontSmall
+                wrapMode: Text.WordWrap
+                horizontalAlignment: Text.AlignHCenter
+            }
+
+            Button {
+                Layout.alignment: Qt.AlignHCenter
+                flat: true
+                onClicked: root.startLoad()
+                contentItem: Text {
+                    text: "↻ 重试"
+                    color: theme.blue
+                    font.pixelSize: cfg.fontSmall
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                background: Rectangle {
+                    radius: 6
+                    color: parent.hovered
+                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
+                        : "transparent"
+                }
+            }
         }
 
         // ── Todo 表单 ──
@@ -732,6 +790,8 @@ Popup {
                     border.width: parent.activeFocus ? 1 : 0
                     border.color: Qt.rgba(theme.blue.r, theme.blue.g, theme.blue.b, 0.5)
                 }
+            }
+        }
             }
         }
 

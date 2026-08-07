@@ -536,17 +536,40 @@ Item {
                     Layout.fillWidth: true
                     spacing: 1
 
-                    Text {
-                        id: titleText
-                        text: modelData.title
-                        color: colors ? colors.text : "#cdd6f4"
-                        font.pixelSize: cfg.fontBase
-                        elide: Text.ElideRight
+                    RowLayout {
+                        spacing: 4
                         Layout.fillWidth: true
 
-                        // 已完成状态用删除线
-                        font.strikeout: modelData.status === "✅"
-                        opacity: modelData.status === "✅" ? 0.6 : 1.0
+                        Text {
+                            id: titleText
+                            text: modelData.title
+                            color: colors ? colors.text : "#cdd6f4"
+                            font.pixelSize: cfg.fontBase
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+
+                            // 已完成状态用删除线
+                            font.strikeout: modelData.status === "✅"
+                            opacity: modelData.status === "✅" ? 0.6 : 1.0
+                        }
+
+                        EntryQuickActions {
+                            revealed: itemDel.hovered
+                            editColor: colors ? colors.blue : "#89b4fa"
+                            copyColor: colors ? colors.green : "#a6e3a1"
+                            hoverColor: colors ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.55) : "#45475a"
+                            iconSize: cfg.fontSmall
+                            onEditRequested: {
+                                listView.currentIndex = itemDel.index;
+                                root._trackCurrent();
+                                root.editCurrentItem();
+                            }
+                            onCopyRequested: {
+                                listView.currentIndex = itemDel.index;
+                                root._trackCurrent();
+                                root.copyCurrentItem();
+                            }
+                        }
                     }
 
                     Text {

@@ -75,12 +75,43 @@ Popup {
         panel.copyItem(root.type, root.itemData);
     }
 
+    function requestEdit() {
+        if (!itemData.id) {
+            panel.showToast("⚠️ 该项没有 id，无法编辑");
+            return;
+        }
+        root.close();
+        root.editRequested(root.type, itemData.id);
+    }
+
+    function requestDelete() {
+        if (!itemData.id) {
+            panel.showToast("⚠️ 该项没有 id，无法删除");
+            return;
+        }
+        if (!root.deleteArmed) {
+            root.deleteArmed = true;
+            deleteReset.restart();
+            panel.showToast("再次点击删除以确认");
+            return;
+        }
+        root.deleteArmed = false;
+        deleteReset.stop();
+        panel.deleteItem(root.type, itemData.id, function() {
+            root.close();
+        });
+        panel.showToast("🗑️ 删除中...");
+    }
+
     modal: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
     dim: true
 
-    implicitWidth: Math.min(parent ? parent.width * 0.9 : 380, 380)
-    implicitHeight: Math.min(contentColumn.implicitHeight + padding * 2, parent ? parent.height * 0.7 : 400)
+    implicitWidth: Math.min(parent ? parent.width * 0.92 : 400, 400)
+    implicitHeight: Math.min(
+        Math.max(300, bodyColumn.implicitHeight + 150 + padding * 2),
+        parent ? parent.height * 0.78 : 520
+    )
     padding: 16
 
     x: (parent.width - width) / 2
@@ -91,7 +122,10 @@ Popup {
     onOpened: {
         root.deleteArmed = false;
         if (root.previewOnly) imagePreview.open();
-        else contentItem.forceActiveFocus();
+        else {
+            contentItem.forceActiveFocus();
+            Qt.callLater(function() { detailScroll.contentItem.contentY = 0; });
+        }
     }
     // 关闭后把焦点还给所属列表，保证 gt/j/k 等继续可用。
     onClosed: {
@@ -128,6 +162,9 @@ Popup {
             } else if (event.key === Qt.Key_Y && !event.modifiers) {
                 // y — 复制正文到剪切板（vim yank）
                 root.copyItemText();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_E && !event.modifiers) {
+                root.requestEdit();
                 event.accepted = true;
             }
         }
@@ -170,6 +207,20 @@ Popup {
             height: 1
             color: Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.3)
         }
+
+        ScrollView {
+            id: detailScroll
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.minimumHeight: 120
+            clip: true
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+            ColumnLayout {
+                id: bodyColumn
+                width: detailScroll.availableWidth
+                spacing: 10
 
         // ── Todo Fields ──
         ColumnLayout {
@@ -371,6 +422,8 @@ Popup {
             tagColor: theme ? theme.sapphire : "#74c7ec"
             visible: itemData.tags !== undefined && itemData.tags !== null && itemData.tags.length > 0
         }
+            }
+        }
 
         // ── Todo Action Buttons ──
         RowLayout {
@@ -433,30 +486,11 @@ Popup {
                 }
             }
 
-            Button {
-                Layout.fillWidth: true
-                flat: true
-
-                contentItem: Text {
-                    text: "关闭"
-                    color: theme.subtext1
-                    font.pixelSize: cfg.fontSmall
-                    horizontalAlignment: Text.AlignHCenter
-                }
-                background: Rectangle {
-                    radius: 6
-                    color: parent.hovered
-                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
-                        : "transparent"
-                }
-                onClicked: root.close()
-            }
         }
 
-        // ── Idea/Log 操作按钮（复制 + 编辑 + 删除 + 关闭） ──
+        // ── 全类型通用操作──
         RowLayout {
             spacing: 8
-            visible: type !== "todo"
             Layout.fillWidth: true
 
             Button {
@@ -494,12 +528,7 @@ Popup {
                         ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
                         : "transparent"
                 }
-                onClicked: {
-                    if (!itemData.id) { panel.showToast("⚠️ 该项没有 id，无法编辑"); return; }
-                    // 关闭详情 → 打开编辑（避免两个 popup 叠加）
-                    root.close();
-                    root.editRequested(root.type, itemData.id);
-                }
+                onClicked: root.requestEdit()
             }
 
             Button {
@@ -518,39 +547,7 @@ Popup {
                         ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
                         : "transparent"
                 }
-                onClicked: {
-                    if (!itemData.id) { panel.showToast("⚠️ 该项没有 id，无法删除"); return; }
-                    if (!root.deleteArmed) {
-                        root.deleteArmed = true;
-                        deleteReset.restart();
-                        panel.showToast("再次点击删除以确认");
-                        return;
-                    }
-                    root.deleteArmed = false;
-                    deleteReset.stop();
-                    panel.deleteItem(root.type, itemData.id, function() {
-                        root.close();
-                    });
-                    panel.showToast("🗑️ 删除中...");
-                }
-            }
-
-            Button {
-                Layout.fillWidth: true
-                flat: true
-                contentItem: Text {
-                    text: "关闭"
-                    color: theme.subtext1
-                    font.pixelSize: cfg.fontSmall
-                    horizontalAlignment: Text.AlignHCenter
-                }
-                background: Rectangle {
-                    radius: 6
-                    color: parent.hovered
-                        ? Qt.rgba(theme.surface1.r, theme.surface1.g, theme.surface1.b, 0.4)
-                        : "transparent"
-                }
-                onClicked: root.close()
+                onClicked: root.requestDelete()
             }
         }
     }

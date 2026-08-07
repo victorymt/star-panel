@@ -106,7 +106,9 @@ starcatch log add --help | grep -- --image  # 日志图片需要新版 CLI
     ├── IdeaList.qml       灵感列表
     ├── LogList.qml        日志列表
     ├── QuickInput.qml     快速输入
-    ├── DetailPopup.qml    详情弹窗（todo 完成/归档等操作）
+    ├── DetailPopup.qml    可滚动详情弹窗（查看/复制/编辑/删除）
+    ├── EditPopup.qml      可滚动编辑表单
+    ├── EntryQuickActions.qml  条目悬停快捷操作
     ├── TagList.qml        标签显示组件
     ├── SettingsPanel.qml  设置面板（主题/宽度/界面缩放）
     ├── Colors.qml         主题色（Matugen / Catppuccin 预设）
@@ -194,7 +196,7 @@ qs -c star-panel ipc call panel hide
 | 进命令模式 | `:` | vim 风格，交给 QuickInput 处理 |
 | 关弹窗/关面板 | `q` | vim `:q` 等价 |
 | 删除当前项 | `dd` | 2.5s 内按两次 d 确认 |
-| 编辑当前项 | `e` | 打开编辑弹窗 |
+| 编辑当前项 | `e` | 打开编辑弹窗；详情弹窗内同样可用 |
 | 复制当前项 | `y` | 复制到剪切板（灵感：标题+内容；日志：正文；待办：标题+描述）；详情弹窗内同样可用 |
 | 查看详情 | `Enter` | 打开详情弹窗 |
 | 切 Todo 过滤器 | `1` / `2` / `3` | Pending / Done / Archived（仅 TodoList） |
@@ -256,6 +258,8 @@ qs -c star-panel ipc call panel hide
 - **关闭按钮** (✕)：关闭面板
 - **点击外部**：点击面板右侧空白区域关闭
 - **Tab 切换**：在待办/灵感/日志之间切换
+- **条目操作**：单击条目查看详情；悬停条目可直接编辑或复制
+- **详情与编辑**：长内容在主体区域滚动，标题和底部操作栏保持可见
 - **快速输入**：在底部输入框输入内容，Enter 提交到 Starcatch
   - 按 Esc 返回列表时保留未提交草稿，再次聚焦可继续输入
   - 点击类型按钮可在 `📋待办 → 💭灵感 → 📓日志` 之间循环
