@@ -27,6 +27,9 @@ test("list commands use the configured executable", () => {
   assert.deepStrictEqual(commands.listCommand(executable, "log", 30), [
     executable, "--json", "log", "list", "-d", "30"
   ]);
+  assert.deepStrictEqual(commands.listCommand(executable, "log", 0), [
+    executable, "--json", "log", "list", "--all"
+  ]);
 });
 
 test("empty executable falls back to starcatch", () => {

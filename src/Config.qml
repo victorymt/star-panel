@@ -44,7 +44,7 @@ Item {
     // ── 待办过滤器状态 ──
     property string todoFilter: "Pending"
 
-    // ── 日志时间范围 ──
+    // ── 日志时间范围：0=全部，1/3/7/30=最近 N 天 ──
     property int logFilterDays: 3
 
     // ── 持久化路径 ──
@@ -121,7 +121,7 @@ Item {
 
     function normalizeLogFilterDays(value) {
         var days = Number(value);
-        return days === 1 || days === 3 || days === 7 || days === 30 ? days : 3;
+        return days === 0 || days === 1 || days === 3 || days === 7 || days === 30 ? days : 3;
     }
 
     function normalizeUiScale(value) {

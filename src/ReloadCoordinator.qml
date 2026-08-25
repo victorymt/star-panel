@@ -41,7 +41,7 @@ Item {
 
     function normalizeLogFilterDays(value) {
         var days = Number(value);
-        return days === 1 || days === 3 || days === 7 || days === 30 ? days : 3;
+        return days === 0 || days === 1 || days === 3 || days === 7 || days === 30 ? days : 3;
     }
 
     function reload(type) {

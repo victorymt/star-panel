@@ -164,7 +164,8 @@ Item {
             { label: "今天", days: 1 },
             { label: "近 3 天", days: 3 },
             { label: "近 7 天", days: 7 },
-            { label: "近 30 天", days: 30 }
+            { label: "近 30 天", days: 30 },
+            { label: "全部", days: 0 }
         ]
 
         RowLayout {
@@ -277,6 +278,7 @@ Item {
             anchors.centerIn: parent
             text: {
                 if (searchText.trim()) return "🔍 没有匹配的结果";
+                if (filterDays === 0) return "📓 暂无日志";
                 if (filterDays === 1) return "📓 今天暂无日志\n随手记下此刻吧~";
                 return "📓 近 " + filterDays + " 天暂无日志";
             }

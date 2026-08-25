@@ -467,19 +467,22 @@ test("emacsEditResult kills text", () => {
 });
 
 test("normalizeLogFilterDays accepts supported presets", () => {
+  assert.strictEqual(normalizeLogFilterDays(0), 0);
   assert.strictEqual(normalizeLogFilterDays(1), 1);
   assert.strictEqual(normalizeLogFilterDays(3), 3);
   assert.strictEqual(normalizeLogFilterDays("7"), 7);
   assert.strictEqual(normalizeLogFilterDays(30), 30);
 });
 test("normalizeLogFilterDays falls back to three days", () => {
-  assert.strictEqual(normalizeLogFilterDays(0), 3);
   assert.strictEqual(normalizeLogFilterDays(14), 3);
   assert.strictEqual(normalizeLogFilterDays(undefined), 3);
 });
 test("logListCommand uses the normalized time range", () => {
   assert.deepStrictEqual(logListCommand(7), ["starcatch", "--json", "log", "list", "-d", "7"]);
   assert.deepStrictEqual(logListCommand(99), ["starcatch", "--json", "log", "list", "-d", "3"]);
+});
+test("logListCommand uses --all for the all range", () => {
+  assert.deepStrictEqual(logListCommand(0), ["starcatch", "--json", "log", "list", "--all"]);
 });
 
 test("inlineImageSummary limits thumbnails and reports overflow", () => {

@@ -25,6 +25,8 @@ function listCommand(executable, type, days) {
         return command(executable, ["--json", "todo", "list", "--all"]);
     if (entryType === "idea")
         return command(executable, ["--json", "idea", "list", "-d", String(days || 7)]);
+    if (days === 0)
+        return command(executable, ["--json", "log", "list", "--all"]);
     return command(executable, ["--json", "log", "list", "-d", String(days || 3)]);
 }
 
