@@ -510,6 +510,23 @@ test("restoreIndex prefers item id and clamps fallback index", () => {
   assert.strictEqual(restoreIndex(items, "gone", -1), 0);
   assert.strictEqual(restoreIndex([], "gone", 4), 0);
 });
+test("restoreIndex matches numeric and string ids", () => {
+  const items = [{id: 101}, {id: 202}, {id: 303}];
+  assert.strictEqual(restoreIndex(items, "202", 0), 1);
+  assert.strictEqual(restoreIndex([{id: "202"}], 202, 0), 0);
+});
+test("restoreIndex accepts QML-style array-like models", () => {
+  const model = {0: {id: "a"}, 1: {id: "b"}, 2: {id: "c"}, length: 3};
+  assert.strictEqual(restoreIndex(model, "b", 0), 1);
+  assert.strictEqual(restoreIndex(model, "gone", 2), 2);
+});
+test("restoreIndex keeps the deleted row and clamps to the new last row", () => {
+  const itemsAfterMiddleDelete = [{id: "a"}, {id: "c"}, {id: "d"}];
+  const itemsAfterLastDelete = [{id: "a"}, {id: "b"}];
+  assert.strictEqual(restoreIndex(itemsAfterMiddleDelete, "deleted", 1), 1);
+  assert.strictEqual(restoreIndex(itemsAfterLastDelete, "deleted", 2), 1);
+  assert.strictEqual(restoreIndex([], "deleted", 2), 0);
+});
 
 // ── All done ──
 console.log(`✓ All ${passed} tests passed`);

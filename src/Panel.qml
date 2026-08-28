@@ -115,6 +115,7 @@ PanelWindow {
         var item = list.currentItem();
         var type = list.itemType;
         var id = item && item.id ? String(item.id) : "";
+        var deletedIndex = list.currentIndex >= 0 ? list.currentIndex : list.lastIndex;
 
         if (!id) {
             resetCommandDeleteConfirmation();
@@ -133,7 +134,11 @@ PanelWindow {
         }
 
         resetCommandDeleteConfirmation();
-        deleteItem(type, id);
+        deleteItem(type, id, function() {
+            // The deleted id cannot be restored; keep its pre-delete row as the fallback.
+            list.currentItemId = "";
+            list.lastIndex = deletedIndex;
+        });
         showToast("🗑️ 删除中...");
     }
 

@@ -16,14 +16,21 @@ function pageRowCount(viewHeight, currentRowHeight, fraction) {
 }
 
 function restoreIndex(model, targetId, oldIndex) {
-    var list = Array.isArray(model) ? model : [];
-    for (var i = 0; i < list.length; i++) {
-        if (list[i] && list[i].id === targetId) return i;
+    var list = model || [];
+    var length = Number(list.length);
+    if (!isFinite(length) || length < 0) length = 0;
+    length = Math.floor(length);
+    var target = targetId === null || targetId === undefined ? "" : String(targetId);
+    if (target !== "") {
+        for (var i = 0; i < length; i++) {
+            if (list[i] && list[i].id !== null && list[i].id !== undefined
+                && String(list[i].id) === target) return i;
+        }
     }
-    if (list.length === 0) return 0;
+    if (length === 0) return 0;
     var fallback = Number(oldIndex);
     if (!isFinite(fallback)) fallback = 0;
-    return Math.max(0, Math.min(list.length - 1, fallback));
+    return Math.max(0, Math.min(length - 1, fallback));
 }
 
 if (typeof module !== "undefined") {

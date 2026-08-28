@@ -17,6 +17,7 @@ Item {
     readonly property string itemType: "log"
     readonly property alias detailPopupControl: detailPopup
     readonly property alias editPopupControl: editPopup
+    readonly property alias currentIndex: listView.currentIndex
     readonly property int maxInlineImages: 3
     readonly property int inlineThumbnailWidth: 64
     readonly property int inlineThumbnailHeight: 48
@@ -57,8 +58,13 @@ Item {
 
     function deleteCurrentItem() {
         var item = currentItem();
+        var deletedIndex = listView.currentIndex >= 0 ? listView.currentIndex : root.lastIndex;
         if (item && item.id) {
-            panel.deleteItem(root.itemType, item.id);
+            panel.deleteItem(root.itemType, item.id, function() {
+                // The deleted id cannot be restored; keep its pre-delete row as the fallback.
+                root.currentItemId = "";
+                root.lastIndex = deletedIndex;
+            });
             panel.showToast("🗑️ 删除中...");
         } else {
             panel.showToast("⚠️ 该项没有 id，无法删除");
