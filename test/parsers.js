@@ -16,6 +16,10 @@ function formatDate(iso) {
   return EntryMapper.formatDate(iso);
 }
 
+function normalizeTodoProject(value) {
+  return EntryMapper.normalizeTodoProject(value);
+}
+
 function parseTodos(text) {
   return EntryMapper.parseTodos(text);
 }
@@ -230,6 +234,42 @@ function filterByStatus(items, status) {
   return items.filter(function(item) { return item.rawStatus === status; });
 }
 
+// Project filtering mirrors TodoList.qml.  An empty/undefined project
+// selection means "all projects"; null selects unassigned todos; named
+// projects are matched exactly (including case).
+function filterByProject(items, project) {
+  var all = Array.isArray(items) ? items : [];
+  if (project === undefined || project === "") return all;
+  if (project === null) {
+    return all.filter(function(item) {
+      return normalizeTodoProject(item && item.project) === null;
+    });
+  }
+  if (typeof project !== "string") return all;
+  var selected = normalizeTodoProject(project);
+  if (selected === null) return all;
+  return all.filter(function(item) {
+    return normalizeTodoProject(item && item.project) === selected;
+  });
+}
+
+// Return stable, de-duplicated project names for a project selector.  Empty
+// and whitespace-only values are omitted because they represent unassigned
+// todos rather than a named project.
+function projectNames(items) {
+  var result = [];
+  (items || []).forEach(function(item) {
+    var value = normalizeTodoProject(item && item.project);
+    if (value !== null && result.indexOf(value) < 0) result.push(value);
+  });
+  result.sort();
+  return result;
+}
+
+function filterTodos(items, status, project, query) {
+  return filterByText(filterByProject(filterByStatus(items, status), project), query);
+}
+
 function filterByText(items, query) {
   if (!query || !query.trim()) return items;
   var q = query.trim().toLowerCase();
@@ -265,6 +305,7 @@ function pageRowCount(viewHeight, currentRowHeight, fraction) {
 module.exports = {
   parseJson,
   formatDate,
+  normalizeTodoProject,
   parseTodos,
   parseIdeas,
   parseLogs,
@@ -290,6 +331,9 @@ module.exports = {
   todoShortcutAction,
   emacsEditResult,
   filterByStatus,
+  filterByProject,
+  projectNames,
+  filterTodos,
   filterByText,
   normalizeLogFilterDays,
   logListCommand,

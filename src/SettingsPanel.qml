@@ -464,6 +464,7 @@ Popup {
                 cfg.uiScale = cfg.defaultUiScale;
                 cfg.themeName  = "";
                 cfg.todoFilter = "Pending";
+                cfg.todoProjectFilter = "";
                 cfg.logFilterDays = 3;
                 cfg.saveSettings();
             }

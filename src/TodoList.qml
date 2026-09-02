@@ -11,6 +11,10 @@ Item {
     property var items: []
     property bool loading: false
     property string filterStatus: cfg.todoFilter
+    // Project filter uses the same three-state contract as Config:
+    // "" = all projects, null = unassigned, string = named project.
+    // It is intentionally local to the already-fetched todo list.
+    property var filterProject: cfg.todoProjectFilter
     readonly property var colors: theme
     property string searchText: ""
     property bool searchActive: searchField.activeFocus
@@ -29,6 +33,90 @@ Item {
     // currentIndex 重置为 -1，故不能用 onModelChanged 时的 currentIndex，
     // 必须用导航时快照的 lastIndex 作 fallback。
     property int lastIndex: 0
+
+    // The data source starts with an empty array before the first CLI request.
+    // Track that a fetch has actually started so a persisted project is not
+    // cleared during component initialization; validate it after the first
+    // successful items replacement instead.
+    property bool _todoFetchObserved: false
+    property bool _todoDataLoaded: false
+    property bool _projectValidationScheduled: false
+
+    function normalizeProjectValue(value) {
+        if (value === null) return null;
+        if (typeof value !== "string") return "";
+        return value.trim();
+    }
+
+    function normalizeItemProject(value) {
+        if (typeof value !== "string") return null;
+        var normalized = value.trim();
+        return normalized ? normalized : null;
+    }
+
+    function projectFilterEquals(left, right) {
+        return normalizeProjectValue(left) === normalizeProjectValue(right);
+    }
+
+    function setProjectFilter(value) {
+        var next = normalizeProjectValue(value);
+        if (!projectFilterEquals(root.filterProject, next))
+            root.filterProject = next;
+        if (cfg.settingsLoaded && !projectFilterEquals(cfg.todoProjectFilter, next)) {
+            cfg.todoProjectFilter = next;
+            cfg.saveSettings();
+        }
+    }
+
+    function hasNamedProject(project) {
+        var selected = normalizeProjectValue(project);
+        if (selected === "" || selected === null) return false;
+        var all = items || [];
+        for (var i = 0; i < all.length; i++) {
+            if (normalizeItemProject(all[i] && all[i].project) === selected)
+                return true;
+        }
+        return false;
+    }
+
+    function validateProjectFilter() {
+        if (!root._todoDataLoaded || !cfg.settingsLoaded) return;
+        var selected = normalizeProjectValue(root.filterProject);
+        // Keep the explicit unassigned option even when no such todo exists;
+        // it remains a valid persisted choice and has a useful empty state.
+        if (typeof selected === "string" && selected !== ""
+                && !root.hasNamedProject(selected)) {
+            root.setProjectFilter("");
+        }
+    }
+
+    // projectOptions depends on filterProject.  Defer validation until the
+    // current binding evaluation/notification has settled; changing the
+    // dependency synchronously from onProjectOptionsChanged causes a QML
+    // binding-loop warning when a refresh removes the selected project.
+    function scheduleProjectFilterValidation() {
+        if (root._projectValidationScheduled) return;
+        root._projectValidationScheduled = true;
+        Qt.callLater(function() {
+            root.validateProjectFilter();
+            root._projectValidationScheduled = false;
+        });
+    }
+
+    Component.onCompleted: {
+        // Fetch observation is set by the loading binding before items arrive.
+        root.scheduleProjectFilterValidation();
+    }
+
+    onLoadingChanged: {
+        if (loading) root._todoFetchObserved = true;
+    }
+
+    onItemsChanged: {
+        if (!root._todoFetchObserved) return;
+        root._todoDataLoaded = true;
+        root.scheduleProjectFilterValidation();
+    }
 
     function focusSearch() { searchField.forceActiveFocus(); }
     function focusList() { listView.forceActiveFocus(); }
@@ -128,23 +216,91 @@ Item {
     // dd 第二次 d 的超时（2.5s 内按第二次 d 才算 dd，与 toast 时长对齐）
     Timer { id: dReset; interval: 2500; onTriggered: root._pendingD = false }
 
-    // 过滤后的列表（状态 + 搜索）
+    // 过滤后的列表（状态 + 项目 + 搜索）
+    // 项目选项从全部待办动态生成（而不是当前状态筛选结果），这样切换
+    // Pending/Done/Archived 时项目下拉菜单仍保持完整且稳定。未分类固定保留，
+    // 使已保存的 null 选择在首次加载和空列表时也能恢复。
+    readonly property var projectOptions: {
+        var names = [];
+        var all = items || [];
+        for (var i = 0; i < all.length; i++) {
+            var value = root.normalizeItemProject(all[i] && all[i].project);
+            if (value !== null && names.indexOf(value) < 0)
+                names.push(value);
+        }
+        // Keep a persisted named value visible until the first real data set
+        // arrives; otherwise the ComboBox briefly jumps to “all projects”.
+        var selected = root.normalizeProjectValue(root.filterProject);
+        if (!root._todoDataLoaded && typeof selected === "string"
+                && selected !== "" && names.indexOf(selected) < 0) {
+            names.push(selected);
+        }
+        names.sort();
+
+        var options = [{ kind: "all", value: "", label: "📁 全部项目" }];
+        for (var n = 0; n < names.length; n++) {
+            options.push({ kind: "named", value: names[n], label: "📁 " + names[n] });
+        }
+        options.push({ kind: "unassigned", value: null, label: "📁 未分类" });
+        return options;
+    }
+
+    function projectOptionIndex(project) {
+        var selected = normalizeProjectValue(project);
+        for (var i = 0; i < projectOptions.length; i++) {
+            var option = projectOptions[i];
+            if (selected === null && option.kind === "unassigned") return i;
+            if (selected === "" && option.kind === "all") return i;
+            if (typeof selected === "string" && selected !== ""
+                    && option.kind === "named" && option.value === selected)
+                return i;
+        }
+        return -1;
+    }
+
     readonly property var filteredItems: {
         var all = items || [];
         var statusFiltered = all.filter(function(item) {
             return item.rawStatus === filterStatus;
         });
-        if (!searchText.trim()) return statusFiltered;
+        var selectedProject = root.normalizeProjectValue(filterProject);
+        var projectFiltered = statusFiltered;
+        if (selectedProject === null) {
+            projectFiltered = statusFiltered.filter(function(item) {
+                return root.normalizeItemProject(item && item.project) === null;
+            });
+        } else if (selectedProject !== "") {
+            projectFiltered = statusFiltered.filter(function(item) {
+                return root.normalizeItemProject(item && item.project) === selectedProject;
+            });
+        }
+        if (!searchText.trim()) return projectFiltered;
         var q = searchText.trim().toLowerCase();
-        return statusFiltered.filter(function(item) {
+        return projectFiltered.filter(function(item) {
             return (item.title && item.title.toLowerCase().indexOf(q) >= 0)
                 || (item.description && item.description.toLowerCase().indexOf(q) >= 0);
         });
     }
 
+    // If a completed refresh removes the selected named project, fall back to
+    // all projects. The _todoDataLoaded guard avoids clearing persisted state
+    // while the initial request is still in flight.
+    onProjectOptionsChanged: {
+        root.scheduleProjectFilterValidation();
+    }
+
     onFilterStatusChanged: {
         if (cfg.todoFilter !== filterStatus) {
             cfg.todoFilter = filterStatus;
+            cfg.saveSettings();
+        }
+    }
+
+    onFilterProjectChanged: {
+        if (!cfg.settingsLoaded) return;
+        var selected = root.normalizeProjectValue(filterProject);
+        if (!root.projectFilterEquals(cfg.todoProjectFilter, selected)) {
+            cfg.todoProjectFilter = selected;
             cfg.saveSettings();
         }
     }
@@ -157,6 +313,14 @@ Item {
             if (root.filterStatus !== cfg.todoFilter) {
                 root.filterStatus = cfg.todoFilter;
             }
+        }
+        function onTodoProjectFilterChanged() {
+            var selected = root.normalizeProjectValue(cfg.todoProjectFilter);
+            if (!root.projectFilterEquals(root.filterProject, selected))
+                root.filterProject = selected;
+        }
+        function onSettingsLoadedChanged() {
+            root.scheduleProjectFilterValidation();
         }
     }
 
@@ -213,7 +377,122 @@ Item {
             Item { Layout.fillWidth: true }
         }
 
-        // 第二行：搜索框（占满宽度，与 IdeaList/LogList 一致）
+        // 第二行：项目筛选（项目名来自当前已加载的全部待办）
+        ComboBox {
+            id: projectCombo
+            Layout.fillWidth: true
+            Layout.preferredHeight: cfg.compactControlHeight
+            model: root.projectOptions
+            textRole: "label"
+            KeyNavigation.tab: searchField
+            KeyNavigation.backtab: filterBar
+
+            Component.onCompleted: {
+                currentIndex = Math.max(0, root.projectOptionIndex(root.filterProject));
+            }
+
+            Connections {
+                target: root
+                function onFilterProjectChanged() {
+                    var index = root.projectOptionIndex(root.filterProject);
+                    projectCombo.currentIndex = index < 0 ? 0 : index;
+                }
+                function onProjectOptionsChanged() {
+                    var index = root.projectOptionIndex(root.filterProject);
+                    projectCombo.currentIndex = index;
+                }
+            }
+
+            onActivated: {
+                var option = root.projectOptions[currentIndex];
+                root.setProjectFilter(option ? option.value : "");
+            }
+
+            contentItem: Text {
+                text: projectCombo.currentIndex >= 0
+                    && projectCombo.currentIndex < root.projectOptions.length
+                    ? root.projectOptions[projectCombo.currentIndex].label : "📁 全部项目"
+                color: colors ? colors.text : "#cdd6f4"
+                font.pixelSize: cfg.fontSmall
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+
+            background: Rectangle {
+                radius: 6
+                color: projectCombo.hovered
+                    ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.4)
+                    : Qt.rgba(colors.surface0.r, colors.surface0.g, colors.surface0.b, 0.3)
+                border.width: projectCombo.visualFocus ? 1 : 0
+                border.color: colors ? Qt.rgba(colors.blue.r, colors.blue.g, colors.blue.b, 0.3) : "transparent"
+            }
+
+            delegate: ItemDelegate {
+                required property var modelData
+                required property int index
+                width: projectCombo.width
+                // ComboBox does not automatically forward highlightedIndex to
+                // custom delegates; keep keyboard navigation visibly focused.
+                highlighted: projectCombo.highlightedIndex === index
+
+                contentItem: Text {
+                    text: modelData.label
+                    color: projectCombo.currentIndex === index
+                        ? (colors ? colors.text : "#cdd6f4")
+                        : (colors ? colors.subtext0 : "#a6adc8")
+                    font.pixelSize: cfg.fontSmall
+                    font.bold: projectCombo.currentIndex === index
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                }
+
+                background: Rectangle {
+                    color: highlighted
+                        ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.4)
+                        : "transparent"
+                }
+            }
+
+            popup: Popup {
+                y: projectCombo.height
+                width: projectCombo.width
+                implicitHeight: Math.min(contentItem.implicitHeight + padding * 2, 260)
+                padding: 4
+
+                contentItem: ListView {
+                    clip: true
+                    implicitHeight: contentHeight
+                    model: projectCombo.popup.visible ? projectCombo.delegateModel : null
+                    // Follow the highlighted option so a long project list
+                    // scrolls as the user presses Up/Down.
+                    currentIndex: projectCombo.highlightedIndex
+                    highlightRangeMode: ListView.ApplyRange
+                    highlightMoveDuration: 0
+
+                    ScrollBar.vertical: ScrollBar {
+                        policy: ScrollBar.AsNeeded
+                    }
+                }
+
+                background: Rectangle {
+                    radius: 8
+                    color: colors ? Qt.rgba(colors.base.r, colors.base.g, colors.base.b, 0.96) : "#1e1e2e"
+                    border.width: 1
+                    border.color: colors ? Qt.rgba(colors.surface1.r, colors.surface1.g, colors.surface1.b, 0.4) : "#45475a"
+                }
+            }
+
+            indicator: Text {
+                text: "▾"
+                color: colors ? colors.subtext0 : "#a6adc8"
+                font.pixelSize: cfg.fontTiny
+                anchors.right: parent.right
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
+        // 第三行：搜索框（占满宽度，与 IdeaList/LogList 一致）
         TextField {
             id: searchField
             Layout.fillWidth: true
@@ -238,7 +517,7 @@ Item {
             onTextChanged: root.searchText = text
 
             KeyNavigation.tab: listView
-            KeyNavigation.backtab: filterBar
+            KeyNavigation.backtab: projectCombo
 
             Keys.onPressed: function(event) {
                 if (event.key === Qt.Key_Escape) {
@@ -288,8 +567,14 @@ Item {
         Text {
             anchors.centerIn: parent
             text: {
+                var selectedProject = root.normalizeProjectValue(filterProject);
+                var projectLabel = selectedProject === null ? "未分类" : selectedProject;
+                if (searchText.trim() && selectedProject !== "")
+                    return "🔍 项目「" + projectLabel + "」没有匹配的结果";
                 if (searchText.trim()) return "🔍 没有匹配的结果";
                 if (items.length === 0) return "✨ 暂无待办\n一切都在掌控之中~";
+                if (selectedProject !== "")
+                    return "📁 项目「" + projectLabel + "」没有待办任务";
                 if (filterStatus === "Pending") return "⬜ 没有待办任务";
                 if (filterStatus === "Done") return "✅ 没有已完成任务";
                 return "📦 没有已归档任务";

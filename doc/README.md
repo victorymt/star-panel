@@ -264,6 +264,18 @@ qs -c star-panel ipc call panel hide
 | 归档当前项 | `a` | 非 Archived 当前项归档 |
 | 点击 chips | 鼠标点击 | 也可切换过滤器 |
 
+#### Todo 项目筛选
+
+待办列表顶部的项目 ComboBox 会从本次加载的全部 Todo 中动态生成项目选项。下拉框固定
+包含 **全部项目** 与 **未分类**，其余选项为去重后的项目名；项目名过长时仅在控件中
+省略显示，下拉列表仍可用键盘导航。未填写项目、项目字段缺失或值为 `null` 的待办均归入
+“未分类”。
+
+项目筛选与状态 chips、关键词搜索按“同时满足”组合：例如选择某项目后切到“已完成”，
+只显示该项目下已完成且匹配搜索词的待办。切换状态或重新加载数据不会主动清除选择；如果
+保存的项目已不在最新数据中，则回退到“全部项目”。切换项目只在内存中的已加载列表上
+过滤，不会重复调用 Starcatch CLI。
+
 ### 4.4 交互说明
 
 - **刷新按钮** (↻)：重新拉取 Starcatch 数据
@@ -319,10 +331,14 @@ qs -c star-panel ipc call panel hide
 | 红色日期 | 已过期 |
 | 橙色日期 | 2 天内到期 |
 
+待办列表还支持按项目过滤。项目值来自 Todo 的 `project` 字段；缺失、`null` 或空白值
+统一显示为“未分类”。项目选项覆盖所有状态的待办，而不是仅当前状态，因此切换 Pending、
+Done 或 Archived 时可以继续使用同一项目选择。默认筛选为“全部项目”。
+
 CLI 输出通过 `--json` 选项返回 JSON，面板用 `JSON.parse()` 解析:
 
 ```
-starcatch --json todo list --all  →  [{ id, title, priority, status, due_date, tags, ... }, ...]
+starcatch --json todo list --all  →  [{ id, title, priority, status, due_date, project, tags, ... }, ...]
 starcatch --json idea list -d 7   →  [{ id, title, content, source, tags, ... }, ...]
 starcatch --json log list -d N    →  [{ id, content, mood, tags, images, ... }, ...]
 starcatch --json log list --all   →  [{ id, content, mood, tags, images, ... }, ...]
@@ -373,6 +389,7 @@ Matugen 模式下通过 `Timer { interval: 3000 }` 轮询文件变化，实现�
 - `uiScale`: 0.8 ~ 1.6，统一调整文字与控件密度；`fontTiny` 到 `fontXl` 由该比例派生
 - `themeName`: "" (Matugen 自动) / "mocha" / "latte" / "frappe" / "macchiato"
 - `todoFilter`: "Pending" / "Done" / "Archived"
+- `todoProjectFilter`: `""`（全部项目）/ `null`（未分类）/ 项目名字符串；按项目筛选的选择会持久化
 - `logFilterDays`: 0（全部）/ 1 / 3 / 7 / 30（默认 3）
 
 > 注：自动刷新间隔（30000ms）由 `ReloadCoordinator.qml` 的 `autoRefreshTimer` 管理；

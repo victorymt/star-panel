@@ -2,6 +2,7 @@ const assert = require("assert");
 const {
   parseJson,
   formatDate,
+  normalizeTodoProject,
   parseTodos,
   parseIdeas,
   parseLogs,
@@ -27,6 +28,9 @@ const {
   todoShortcutAction,
   emacsEditResult,
   filterByStatus,
+  filterByProject,
+  projectNames,
+  filterTodos,
   filterByText,
   normalizeLogFilterDays,
   logListCommand,
@@ -57,8 +61,8 @@ test("undefined input", () => assert.strictEqual(formatDate(undefined), ""));
 // ── parseTodos ──
 test("3 todos with full fields", () => {
   const todoInput = JSON.stringify([
-    { id: "1", status: "Pending", priority: "P0", title: "Urgent", description: "desc1", tags: ["work"], due_date: "2024-07-01" },
-    { id: "2", status: "Done", priority: "P2", title: "Done task", tags: [], due_date: "2024-06-20" },
+    { id: "1", status: "Pending", priority: "P0", title: "Urgent", description: "desc1", tags: ["work"], project: "workbench", due_date: "2024-07-01" },
+    { id: "2", status: "Done", priority: "P2", title: "Done task", tags: [], project: null, due_date: "2024-06-20" },
     { id: "3", status: "Archived", priority: "", title: "Archived", description: null }
   ]);
   const todos = parseTodos(todoInput);
@@ -69,20 +73,75 @@ test("3 todos with full fields", () => {
   assert.strictEqual(todos[0].status, "⬜");
   assert.strictEqual(todos[0].title, "Urgent");
   assert.strictEqual(todos[0].description, "desc1");
+  assert.strictEqual(todos[0].project, "workbench");
   assert.deepStrictEqual(todos[0].tags, ["work"]);
   assert.strictEqual(todos[0].due, "2024-07-01");
   assert.strictEqual(todos[1].priority, "🟢");
   assert.strictEqual(todos[1].status, "✅");
   assert.strictEqual(todos[1].description, "");
+  assert.strictEqual(todos[1].project, null);
   assert.strictEqual(todos[2].priority, "🟢");
   assert.strictEqual(todos[2].status, "📦");
   assert.strictEqual(todos[2].description, "");
+  assert.strictEqual(todos[2].project, null);
   assert.strictEqual(todos[2].due, "-");
   assert.deepStrictEqual(todos[2].tags, []);
 });
 test("parseTodos empty input", () => {
   assert.deepStrictEqual(parseTodos("[]"), []);
   assert.deepStrictEqual(parseTodos("invalid"), []);
+});
+
+test("normalizeTodoProject keeps named projects and normalizes blank values", () => {
+  assert.strictEqual(normalizeTodoProject("workbench"), "workbench");
+  assert.strictEqual(normalizeTodoProject("  workbench  "), "workbench");
+  assert.strictEqual(normalizeTodoProject(""), null);
+  assert.strictEqual(normalizeTodoProject("   "), null);
+  assert.strictEqual(normalizeTodoProject(null), null);
+  assert.strictEqual(normalizeTodoProject(undefined), null);
+});
+
+// ── project filtering ──
+test("filterByProject matches an exact project name", () => {
+  const items = [
+    { project: "star-panel", title: "A" },
+    { project: "Star-Panel", title: "B" },
+    { project: "other", title: "C" },
+    { project: "", title: "unassigned" },
+    { project: null, title: "legacy" }
+  ];
+  assert.deepStrictEqual(filterByProject(items, "star-panel").map(item => item.title), ["A"]);
+  assert.deepStrictEqual(filterByProject(items, "Star-Panel").map(item => item.title), ["B"]);
+});
+test("filterByProject supports all and unassigned selections", () => {
+  const items = [{ project: "a" }, { project: "" }, { project: null }];
+  assert.strictEqual(filterByProject(items, "").length, 3);
+  assert.strictEqual(filterByProject(items, "  ").length, 3);
+  assert.strictEqual(filterByProject(items, null).length, 2);
+  assert.strictEqual(filterByProject(items, null)[0].project, "");
+  assert.strictEqual(filterByProject(items, null)[1].project, null);
+  assert.strictEqual(filterByProject(items, undefined).length, 3);
+  assert.deepStrictEqual(filterByProject(null, "a"), []);
+});
+test("projectNames de-duplicates, normalizes, and sorts names", () => {
+  const items = [
+    { project: "zeta" }, { project: "alpha" }, { project: "alpha" }, { project: " beta " },
+    { project: "" }, { project: null }, {}, { project: "alpha" }
+  ];
+  assert.deepStrictEqual(projectNames(items), ["alpha", "beta", "zeta"]);
+});
+test("filterTodos composes status, project, and text filters", () => {
+  const items = [
+    { rawStatus: "Pending", project: "work", title: "Fix parser", description: "" },
+    { rawStatus: "Pending", project: "work", title: "Review UI", description: "" },
+    { rawStatus: "Done", project: "work", title: "Fix parser", description: "" },
+    { rawStatus: "Pending", project: null, title: "Fix parser", description: "" }
+  ];
+  assert.deepStrictEqual(
+    filterTodos(items, "Pending", "work", "parser").map(item => item.title),
+    ["Fix parser"]
+  );
+  assert.strictEqual(filterTodos(items, "Pending", null, "parser").length, 1);
 });
 
 // ── parseIdeas ──

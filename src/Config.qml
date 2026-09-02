@@ -43,6 +43,9 @@ Item {
 
     // ── 待办过滤器状态 ──
     property string todoFilter: "Pending"
+    // 待办项目过滤器：空字符串=全部项目，null=未分类，非空字符串=指定项目。
+    // 使用 var 保留 null 这一独立状态，避免与真实项目名产生哨兵值冲突。
+    property var todoProjectFilter: ""
 
     // ── 日志时间范围：0=全部，1/3/7/30=最近 N 天 ──
     property int logFilterDays: 3
@@ -58,6 +61,10 @@ Item {
     readonly property string starcatchPath: Quickshell.env("STARCATCH_BIN") || "starcatch"
 
     // ── 从文件加载持久化设置 ──
+    // settingsLoader 是异步的；消费者可用此标志避免在加载完成前把默认值
+    // 写回磁盘，覆盖已有配置。
+    property bool settingsLoaded: false
+
     Process {
         id: settingsLoader
         command: ["bash", "-c", "cat " + config.shellQuote(config.settingsFile) + " 2>/dev/null || echo '{}'"]
@@ -76,11 +83,19 @@ Item {
                     if (typeof data.animationDuration === "number") config.animationDuration = data.animationDuration;
                     if (typeof data.themeName  === "string") config.themeName  = data.themeName;
                     if (typeof data.todoFilter === "string") config.todoFilter = data.todoFilter;
+                    if (data.todoProjectFilter === null
+                        || typeof data.todoProjectFilter === "string") {
+                        config.todoProjectFilter = config.normalizeTodoProjectFilter(
+                            data.todoProjectFilter
+                        );
+                    }
                     if (typeof data.logFilterDays === "number")
                         config.logFilterDays = config.normalizeLogFilterDays(data.logFilterDays);
                 } catch (e) {
                     console.warn("star-panel: failed to parse settings.json:", e.message);
                 }
+                // 无论文件不存在、JSON 无效还是正常解析，都标记加载流程已结束。
+                config.settingsLoaded = true;
                 // 设置加载完成后统一初始化主题，避免与 Colors.qml 的 matugen 读取竞态
                 if (typeof theme !== "undefined") theme.initFromSettings();
             }
@@ -103,6 +118,7 @@ Item {
                 animationDuration: animationDuration,
                 uiScale: normalizeUiScale(uiScale),
                 todoFilter: todoFilter,
+                todoProjectFilter: normalizeTodoProjectFilter(todoProjectFilter),
                 logFilterDays: normalizeLogFilterDays(logFilterDays)
             };
             var json = JSON.stringify(data, null, 2);
@@ -122,6 +138,14 @@ Item {
     function normalizeLogFilterDays(value) {
         var days = Number(value);
         return days === 0 || days === 1 || days === 3 || days === 7 || days === 30 ? days : 3;
+    }
+
+    // 保持项目过滤器的三态契约，并将空白字符串视为“全部项目”。
+    // null 专门表示“未分类”，不能用 || 或 String(value) 把它折叠掉。
+    function normalizeTodoProjectFilter(value) {
+        if (value === null) return null;
+        if (typeof value !== "string") return "";
+        return value.trim();
     }
 
     function normalizeUiScale(value) {

@@ -17,6 +17,15 @@ function formatDate(iso) {
     return parts[0].slice(5) + " " + parts[1].slice(0, 5);
 }
 
+// Starcatch projects are optional strings.  Normalize the optional value at
+// the view-model boundary so QML can distinguish an unassigned todo (null)
+// from the empty-string "all projects" filter.
+function normalizeTodoProject(value) {
+    if (typeof value !== "string") return null;
+    var normalized = value.trim();
+    return normalized ? normalized : null;
+}
+
 function mapTodos(raw) {
     var priorityIcon = { "P0": "🔴", "P1": "🟡", "P2": "🟢", "P3": "⚪" };
     var statusIcon = { "Pending": "⬜", "Done": "✅", "Archived": "📦" };
@@ -29,6 +38,7 @@ function mapTodos(raw) {
             title: item.title,
             description: item.description || "",
             tags: item.tags || [],
+            project: normalizeTodoProject(item.project),
             due: item.due_date || "-"
         };
     });
@@ -72,6 +82,7 @@ if (typeof module !== "undefined") {
         parseJson: parseJson,
         parseListJson: parseListJson,
         formatDate: formatDate,
+        normalizeTodoProject: normalizeTodoProject,
         mapTodos: mapTodos,
         mapIdeas: mapIdeas,
         mapLogs: mapLogs,
